@@ -63,10 +63,30 @@ interface ContentContextType {
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
 export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [posts, setPosts] = useState<Post[]>(() => {
+    try {
+      const saved = localStorage.getItem('cached_posts');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  
+  const [categories, setCategories] = useState<Category[]>(() => {
+    try {
+      const saved = localStorage.getItem('cached_categories');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  const [loading, setLoading] = useState(() => {
+    // If we have cached posts, don't show the initial loading spinner
+    return localStorage.getItem('cached_posts') === null;
+  });
   
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
@@ -123,8 +143,10 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
             ...value,
           })).sort((a, b) => b.timestamp - a.timestamp);
           setPosts(postsList);
+          localStorage.setItem('cached_posts', JSON.stringify(postsList));
         } else {
           setPosts([]);
+          localStorage.setItem('cached_posts', JSON.stringify([]));
         }
       } catch (err) {
         console.error("Error parsing posts:", err);
@@ -148,6 +170,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
             icon: value.icon || 'BookOpen'
           }));
           setCategories(cats);
+          localStorage.setItem('cached_categories', JSON.stringify(cats));
         } else {
           // Initialize defaults only if truly empty and not just loading
           const defaultCats = [
@@ -157,7 +180,9 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
             { name: 'اخلاق', icon: 'Heart' },
             { name: 'روژه', icon: 'Moon' }
           ];
-          setCategories(defaultCats.map((c, i) => ({ id: `def-${i}`, ...c })));
+          const cats = defaultCats.map((c, i) => ({ id: `def-${i}`, ...c }));
+          setCategories(cats);
+          localStorage.setItem('cached_categories', JSON.stringify(cats));
         }
       } catch (err) {
         console.error("Error parsing categories:", err);
