@@ -10,6 +10,7 @@ import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { ContentProvider } from './context/ContentContext';
+import ConfirmDialog from './components/ConfirmDialog';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Player from './pages/Player';
@@ -21,7 +22,7 @@ import CategoryPage from './pages/CategoryPage';
 import SplashAndRegister from './components/SplashAndRegister';
 import ProfileEdit from './pages/ProfileEdit';
 
-function CapacitorHandler() {
+function CapacitorHandler({ onExitRequest }: { onExitRequest: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { mode } = useTheme();
@@ -37,7 +38,7 @@ function CapacitorHandler() {
         if (CapApp && typeof CapApp.addListener === 'function') {
           backListener = await CapApp.addListener('backButton', ({ canGoBack }) => {
             if (location.pathname === '/') {
-              CapApp.exitApp();
+              onExitRequest();
             } else {
               navigate(-1);
             }
@@ -72,14 +73,21 @@ function CapacitorHandler() {
 
 function AppContent() {
   const [isReady, setIsReady] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   if (!isReady) {
     return <SplashAndRegister onComplete={() => setIsReady(true)} />;
   }
 
+  const handleExitConfirm = () => {
+    if (Capacitor.isNativePlatform()) {
+      CapApp.exitApp();
+    }
+  };
+
   return (
     <BrowserRouter>
-      <CapacitorHandler />
+      <CapacitorHandler onExitRequest={() => setShowExitConfirm(true)} />
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
@@ -92,6 +100,13 @@ function AppContent() {
           <Route path="profile-edit" element={<ProfileEdit />} />
         </Route>
       </Routes>
+      <ConfirmDialog
+        isOpen={showExitConfirm}
+        title="وتل"
+        message="ایا غواړئ چې له اپلیکیشن څخه ووځئ؟"
+        onConfirm={handleExitConfirm}
+        onCancel={() => setShowExitConfirm(false)}
+      />
     </BrowserRouter>
   );
 }

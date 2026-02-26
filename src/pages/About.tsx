@@ -23,35 +23,16 @@ const About: React.FC = () => {
   return (
     <div className="space-y-12 pb-12">
       {/* Hero Section */}
-      <header className="relative py-16 px-8 overflow-hidden rounded-[48px] bg-gradient-to-br from-zinc-900 via-zinc-800 to-black text-white shadow-2xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--accent-color)]/20 rounded-full blur-[100px] -mr-48 -mt-48" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] -ml-32 -mb-32" />
-        
-        <div className="relative z-10 space-y-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center space-x-2 space-x-reverse px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10"
-          >
-            <Sparkles size={14} className="text-[var(--accent-color)]" />
-            <span className="text-[10px] font-black uppercase tracking-widest">زموږ کیسه</span>
-          </motion.div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-5xl font-black tracking-tight leading-none"
-          >
-            رمضان المبارک
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-zinc-400 text-sm font-medium max-w-[280px]"
-          >
-            د اسلامي مطالبو او ښکلو ویناوو د خپرولو آنلاین پلیټ فارم.
-          </motion.p>
+      <header className="relative py-10 px-6 overflow-hidden rounded-[40px] bg-[var(--accent-color)] text-white shadow-2xl shadow-[var(--accent-color)]/20">
+        <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
+          <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <circle cx="10" cy="10" r="40" fill="white" />
+            <circle cx="90" cy="90" r="30" fill="white" />
+          </svg>
+        </div>
+        <div className="relative z-10 space-y-2">
+          <h1 className="text-4xl font-black tracking-tight">زمونږ په اړه</h1>
+          <p className="text-white/80 text-sm font-medium">د اسلامي مطالبو او ښکلو ویناوو د خپرولو آنلاین پلیټ فارم.</p>
         </div>
       </header>
 

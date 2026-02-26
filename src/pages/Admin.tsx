@@ -1,8 +1,24 @@
 import React, { useState } from 'react';
-import { useContent } from '../context/ContentContext';
+import { useContent, Category } from '../context/ContentContext';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import * as Icons from 'lucide-react';
+import { 
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { 
   Lock, 
   Send, 
@@ -20,7 +36,8 @@ import {
   XCircle,
   FolderPlus,
   Image as ImageIcon,
-  BookOpen
+  BookOpen,
+  GripVertical
 } from 'lucide-react';
 
 const availableIcons = [
@@ -35,8 +52,47 @@ const availableIcons = [
   'Umbrella', 'Watch', 'Wifi'
 ];
 
+const SortableCategory = ({ cat, getIcon, onEdit, onDelete }: { cat: Category, getIcon: any, onEdit: any, onDelete: any }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: cat.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const IconComponent = getIcon(cat.icon);
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-xl px-3 py-1.5 group">
+      <button {...attributes} {...listeners} className="text-zinc-300 hover:text-zinc-500 cursor-grab active:cursor-grabbing mr-1">
+        <GripVertical size={14} />
+      </button>
+      <IconComponent size={14} className="text-zinc-400" />
+      <span className="text-xs sm:text-sm font-bold ml-2 mr-2">{cat.name}</span>
+      <button
+        onClick={() => onEdit(cat)}
+        className="text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-1 rounded-lg transition-colors ml-1"
+      >
+        <Edit3 size={14} />
+      </button>
+      <button
+        onClick={() => onDelete(cat)}
+        className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded-lg transition-colors"
+      >
+        <XCircle size={14} />
+      </button>
+    </div>
+  );
+};
+
 const Admin: React.FC = () => {
-  const { addPost, updatePost, deletePost, posts, isAdmin, logout, categories, addCategory, deleteCategory } = useContent();
+  const { addPost, updatePost, deletePost, posts, isAdmin, logout, categories, addCategory, updateCategory, reorderCategories, deleteCategory } = useContent();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState(categories[0]?.name || 'عمومي');
@@ -48,6 +104,16 @@ const Admin: React.FC = () => {
   const [newCategory, setNewCategory] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('BookOpen');
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [migrateToId, setMigrateToId] = useState<string>('');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Helper to get icon component safely
   const getIcon = (name: string) => {
@@ -109,11 +175,49 @@ const Admin: React.FC = () => {
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newCategory.trim()) {
-      await addCategory(newCategory.trim(), newCategoryIcon);
-      setSuccess('کټګوري اضافه شوه');
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, newCategory.trim(), newCategoryIcon);
+        setSuccess('کټګوري ایډیټ شوه');
+        setEditingCategory(null);
+      } else {
+        await addCategory(newCategory.trim(), newCategoryIcon);
+        setSuccess('کټګوري اضافه شوه');
+      }
       setNewCategory('');
       setNewCategoryIcon('BookOpen');
       setTimeout(() => setSuccess(''), 3000);
+    }
+  };
+
+  const handleEditCategory = (cat: Category) => {
+    setEditingCategory(cat);
+    setNewCategory(cat.name);
+    setNewCategoryIcon(cat.icon);
+  };
+
+  const handleDeleteCategoryConfirm = async () => {
+    if (categoryToDelete) {
+      try {
+        await deleteCategory(categoryToDelete.id, migrateToId || undefined);
+        setSuccess('کټګوري حذف شوه');
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (err) {
+        setError('د کټګورۍ حذف کولو پر مهال تېروتنه وشوه');
+      }
+      setCategoryToDelete(null);
+      setMigrateToId('');
+    }
+  };
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    
+    if (active.id !== over.id) {
+      const oldIndex = categories.findIndex(c => c.id === active.id);
+      const newIndex = categories.findIndex(c => c.id === over.id);
+      
+      const newOrder = arrayMove(categories, oldIndex, newIndex);
+      reorderCategories(newOrder);
     }
   };
 
@@ -345,27 +449,45 @@ const Admin: React.FC = () => {
               disabled={!newCategory.trim()}
               className="bg-[var(--accent-color)] text-white px-6 py-3 rounded-2xl font-bold active:scale-95 transition-transform disabled:opacity-50 text-sm sm:text-base"
             >
-              اضافه کول
+              {editingCategory ? 'ساتل' : 'اضافه کول'}
             </button>
+            {editingCategory && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingCategory(null);
+                  setNewCategory('');
+                  setNewCategoryIcon('BookOpen');
+                }}
+                className="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-4 py-3 rounded-2xl font-bold active:scale-95 transition-transform text-sm sm:text-base"
+              >
+                لغوه
+              </button>
+            )}
           </form>
 
-          <div className="flex flex-wrap gap-2">
-            {categories.map(cat => {
-              const IconComponent = getIcon(cat.icon);
-              return (
-                <div key={cat.id} className="flex items-center bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-xl px-3 py-1.5">
-                  <IconComponent size={14} className="text-zinc-400" />
-                  <span className="text-xs sm:text-sm font-bold ml-2 mr-2">{cat.name}</span>
-                  <button
-                    onClick={() => deleteCategory(cat.id)}
-                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded-lg transition-colors"
-                  >
-                    <XCircle size={14} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+          <DndContext 
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext 
+              items={categories.map(c => c.id)}
+              strategy={horizontalListSortingStrategy}
+            >
+              <div className="flex flex-wrap gap-2">
+                {categories.map(cat => (
+                  <SortableCategory 
+                    key={cat.id} 
+                    cat={cat} 
+                    getIcon={getIcon} 
+                    onEdit={handleEditCategory} 
+                    onDelete={setCategoryToDelete} 
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
 
         {/* Posts List for Management */}
@@ -427,6 +549,41 @@ const Admin: React.FC = () => {
         message="ایا تاسو ډاډه یاست چې دا مطلب حذف کوئ؟ دا عمل بیرته نشي ګرځېدلی."
         onConfirm={handleDeleteConfirm}
         onCancel={() => setPostToDelete(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!categoryToDelete}
+        title="کټګوري حذف کول"
+        message={
+          <div className="space-y-4">
+            <p>ایا تاسو ډاډه یاست چې دا کټګوري حذف کوئ؟</p>
+            {posts.filter(p => p.category === categoryToDelete?.name).length > 0 && (
+              <div className="space-y-2">
+                <p className="text-red-500 text-sm font-bold">
+                  پاملرنه: دا کټګوري {posts.filter(p => p.category === categoryToDelete?.name).length} مطالب لري.
+                </p>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">مطالب بلې کټګورۍ ته انتقال کړئ (اختیاري):</label>
+                  <select
+                    value={migrateToId}
+                    onChange={(e) => setMigrateToId(e.target.value)}
+                    className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-700 rounded-xl py-2 px-3 text-sm"
+                  >
+                    <option value="">-- مطالب حذف کړئ --</option>
+                    {categories.filter(c => c.id !== categoryToDelete?.id).map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        }
+        onConfirm={handleDeleteCategoryConfirm}
+        onCancel={() => {
+          setCategoryToDelete(null);
+          setMigrateToId('');
+        }}
       />
     </div>
   );

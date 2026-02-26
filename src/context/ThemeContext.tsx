@@ -7,6 +7,8 @@ interface ThemeContextType {
   setMode: (mode: ThemeMode) => void;
   accentColor: string;
   setAccentColor: (color: string) => void;
+  fontSize: number;
+  setFontSize: (size: number) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -21,18 +23,32 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return localStorage.getItem('accent-color') || '#10b981'; // Default emerald-500
   });
 
+  const [fontSize, setFontSize] = useState(() => {
+    return Number(localStorage.getItem('font-size')) || 16;
+  });
+
   useEffect(() => {
     localStorage.setItem('theme-mode', mode);
     const root = window.document.documentElement;
     
     const applyTheme = (theme: 'light' | 'dark') => {
-      root.classList.remove('light', 'dark');
-      root.classList.add(theme);
+      if (theme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
     };
 
     if (mode === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      applyTheme(systemTheme);
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e: MediaQueryListEvent) => {
+        applyTheme(e.matches ? 'dark' : 'light');
+      };
+      
+      applyTheme(mediaQuery.matches ? 'dark' : 'light');
+      mediaQuery.addEventListener('change', handleChange);
+      
+      return () => mediaQuery.removeEventListener('change', handleChange);
     } else {
       applyTheme(mode);
     }
@@ -43,8 +59,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     document.documentElement.style.setProperty('--accent-color', accentColor);
   }, [accentColor]);
 
+  useEffect(() => {
+    localStorage.setItem('font-size', fontSize.toString());
+  }, [fontSize]);
+
   return (
-    <ThemeContext.Provider value={{ mode, setMode, accentColor, setAccentColor }}>
+    <ThemeContext.Provider value={{ mode, setMode, accentColor, setAccentColor, fontSize, setFontSize }}>
       {children}
     </ThemeContext.Provider>
   );

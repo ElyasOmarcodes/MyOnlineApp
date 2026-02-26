@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useContent } from '../context/ContentContext';
+import { useTheme } from '../context/ThemeContext';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmDialog from '../components/ConfirmDialog';
+import NetworkDialog from '../components/NetworkDialog';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 import { 
   Heart, 
   Share2, 
@@ -22,17 +26,26 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 const Player: React.FC = () => {
-  const { currentPost: contextPost, favorites, toggleFavorite, likePost, isAdmin, deletePost, currentUser, addComment, editComment, deleteComment } = useContent();
+  const { currentPost: contextPost, favorites, toggleFavorite, likePost, isAdmin, deletePost, currentUser, addComment, editComment, deleteComment, checkNetwork } = useContent();
+  const { fontSize } = useTheme();
   const navigate = useNavigate();
   const [currentPost, setCurrentPost] = useState(contextPost);
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showNetworkDialog, setShowNetworkDialog] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Real-time listener for the specific post to ensure comments and likes are always up to date
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
   useEffect(() => {
     if (contextPost) {
       const postRef = ref(db, `posts/${contextPost.id}`);
@@ -75,18 +88,35 @@ const Player: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: currentPost.title,
-        text: currentPost.content,
-        url: window.location.href
-      });
+  const handleShare = async () => {
+    if (!currentPost) return;
+    const shareData = {
+      title: currentPost.title,
+      text: `${currentPost.title}\n\n${currentPost.content}\n\nد اسلامي مطالبو اپلیکیشن څخه`,
+      url: window.location.href
+    };
+
+    try {
+      if (Capacitor.isNativePlatform()) {
+        await Share.share(shareData);
+      } else if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (e) {
+      console.log('Error sharing:', e);
     }
   };
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!liked && currentUser) {
+      if (!(await checkNetwork())) {
+        setShowNetworkDialog(true);
+        return;
+      }
       likePost(currentPost.id);
       setLiked(true);
     }
@@ -94,6 +124,10 @@ const Player: React.FC = () => {
 
   const handleAdminDelete = async () => {
     if (currentPost) {
+      if (!(await checkNetwork())) {
+        setShowNetworkDialog(true);
+        return;
+      }
       await deletePost(currentPost.id);
       navigate('/admin');
     }
@@ -106,6 +140,10 @@ const Player: React.FC = () => {
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (commentText.trim() && currentUser && currentPost) {
+      if (!(await checkNetwork())) {
+        setShowNetworkDialog(true);
+        return;
+      }
       await addComment(currentPost.id, commentText.trim());
       setCommentText('');
     }
@@ -114,37 +152,59 @@ const Player: React.FC = () => {
   const handleEditCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editCommentText.trim() && editingCommentId && currentPost) {
+      if (!(await checkNetwork())) {
+        setShowNetworkDialog(true);
+        return;
+      }
       await editComment(currentPost.id, editingCommentId, editCommentText.trim());
       setEditingCommentId(null);
       setEditCommentText('');
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (currentPost) {
+      if (!(await checkNetwork())) {
+        setShowNetworkDialog(true);
+        return;
+      }
+      await deleteComment(currentPost.id, commentId);
+    }
+  };
+
   const commentsList = currentPost?.comments ? Object.entries(currentPost.comments).map(([id, data]) => ({ id, ...data })).sort((a, b) => b.timestamp - a.timestamp) : [];
 
+  const MAX_LENGTH = 500;
+  const shouldTruncate = currentPost?.content && currentPost.content.length > MAX_LENGTH;
+  const displayContent = shouldTruncate && !isExpanded 
+    ? currentPost.content.substring(0, MAX_LENGTH) + '...' 
+    : currentPost?.content;
+
   return (
-    <div className="space-y-8 pb-24">
-      {/* Top Navigation */}
-      <div className="flex items-center justify-between py-2">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 text-zinc-500 active:scale-90 transition-transform"
-        >
-          <ChevronRight size={24} />
-        </button>
-        <div className="text-center">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">د مطلب تفصیل</span>
+    <div className="space-y-8 pb-24 pt-20">
+      {/* Top Navigation - Pinned */}
+      <div className="fixed top-0 left-0 right-0 z-50 pt-safe bg-zinc-50/90 dark:bg-black/90 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50">
+        <div className="max-w-md mx-auto px-4 pb-3 pt-4 flex items-center justify-between">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 text-zinc-500 active:scale-90 transition-transform relative z-[60]"
+          >
+            <ChevronRight size={24} />
+          </button>
+          <div className="text-center absolute left-0 right-0 pointer-events-none">
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">د مطلب تفصیل</span>
+          </div>
+          <button 
+            onClick={() => toggleFavorite(currentPost.id)}
+            className={`p-3 rounded-2xl shadow-sm border transition-all active:scale-90 relative z-[60] ${
+              (favorites || []).includes(currentPost.id)
+                ? 'bg-red-50 border-red-100 text-red-500'
+                : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-500'
+            }`}
+          >
+            <Heart size={24} fill={(favorites || []).includes(currentPost.id) ? "currentColor" : "none"} />
+          </button>
         </div>
-        <button 
-          onClick={() => toggleFavorite(currentPost.id)}
-          className={`p-3 rounded-2xl shadow-sm border transition-all active:scale-90 ${
-            (favorites || []).includes(currentPost.id)
-              ? 'bg-red-50 border-red-100 text-red-500'
-              : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-500'
-          }`}
-        >
-          <Heart size={24} fill={(favorites || []).includes(currentPost.id) ? "currentColor" : "none"} />
-        </button>
       </div>
 
       {/* Content Header */}
@@ -195,12 +255,23 @@ const Player: React.FC = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="bg-white dark:bg-zinc-900 rounded-[40px] p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm"
+        className="bg-white dark:bg-zinc-900 rounded-[40px] p-6 sm:p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm"
       >
         <div className="prose dark:prose-invert max-w-none">
-          <p className="text-lg leading-loose text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap font-medium">
-            {currentPost.content}
+          <p 
+            className="leading-loose text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap font-medium transition-all duration-300"
+            style={{ fontSize: `${fontSize}px` }}
+          >
+            {displayContent}
           </p>
+          {shouldTruncate && (
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="mt-4 text-[var(--accent-color)] font-bold text-sm flex items-center hover:underline"
+            >
+              {isExpanded ? 'لږ ښودل' : 'نور ولولئ...'}
+            </button>
+          )}
         </div>
       </motion.div>
 
@@ -263,7 +334,7 @@ const Player: React.FC = () => {
                   )}
                   {(isAdmin || currentUser?.id === comment.userId) && (
                     <button 
-                      onClick={() => deleteComment(currentPost.id, comment.id)}
+                      onClick={() => handleDeleteComment(comment.id)}
                       className="text-zinc-400 hover:text-red-500 p-2"
                     >
                       <Trash2 size={14} />
@@ -345,6 +416,11 @@ const Player: React.FC = () => {
         message="ایا تاسو ډاډه یاست چې دا مطلب حذف کوئ؟ دا عمل بیرته نشي ګرځېدلی."
         onConfirm={handleAdminDelete}
         onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      <NetworkDialog 
+        isOpen={showNetworkDialog} 
+        onClose={() => setShowNetworkDialog(false)} 
       />
     </div>
   );

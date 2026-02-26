@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ref, onValue, push, set, update, remove, query, limitToLast, orderByChild } from 'firebase/database';
 import { db } from '../lib/firebase';
 
+import { Network } from '@capacitor/network';
+import { Capacitor } from '@capacitor/core';
+
 export interface Comment {
   id: string;
   userId: string;
@@ -53,11 +56,14 @@ interface ContentContextType {
   deleteComment: (postId: string, commentId: string) => Promise<void>;
   categories: Category[];
   addCategory: (name: string, icon: string) => Promise<void>;
-  deleteCategory: (id: string) => Promise<void>;
+  updateCategory: (id: string, name: string, icon: string) => Promise<void>;
+  reorderCategories: (newOrder: Category[]) => Promise<void>;
+  deleteCategory: (id: string, migrateToId?: string) => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
   login: (user: string, pass: string) => boolean;
   logout: () => void;
+  checkNetwork: () => Promise<boolean>;
 }
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
@@ -100,6 +106,15 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isAdmin, setIsAdmin] = useState(() => {
     return localStorage.getItem('is_admin') === 'true';
   });
+
+  const checkNetwork = async () => {
+    if (Capacitor.isNativePlatform()) {
+      const status = await Network.getStatus();
+      return status.connected;
+    }
+    return navigator.onLine;
+  };
+
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('favorites_posts');
@@ -167,8 +182,9 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const cats = Object.entries(data).map(([key, value]: [string, any]) => ({
             id: key,
             name: value.name || value,
-            icon: value.icon || 'BookOpen'
-          }));
+            icon: value.icon || 'BookOpen',
+            order: value.order || 0
+          })).sort((a, b) => a.order - b.order);
           setCategories(cats);
           localStorage.setItem('cached_categories', JSON.stringify(cats));
         } else {
@@ -288,11 +304,54 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addCategory = async (name: string, icon: string) => {
     if (!categories.find(c => c.name === name)) {
       const catRef = ref(db, 'categories');
-      await push(catRef, { name, icon });
+      await push(catRef, { name, icon, order: categories.length });
     }
   };
 
-  const deleteCategory = async (id: string) => {
+  const updateCategory = async (id: string, name: string, icon: string) => {
+    const catRef = ref(db, `categories/${id}`);
+    await update(catRef, { name, icon });
+  };
+
+  const reorderCategories = async (newOrder: Category[]) => {
+    setCategories(newOrder);
+    const updates: Record<string, any> = {};
+    newOrder.forEach((cat, index) => {
+      updates[`categories/${cat.id}/order`] = index;
+    });
+    await update(ref(db), updates);
+  };
+
+  const deleteCategory = async (id: string, migrateToId?: string) => {
+    const catToDelete = categories.find(c => c.id === id);
+    if (!catToDelete) return;
+
+    if (migrateToId) {
+      const targetCat = categories.find(c => c.id === migrateToId);
+      if (targetCat) {
+        const updates: Record<string, any> = {};
+        posts.forEach(post => {
+          if (post.category === catToDelete.name) {
+            updates[`posts/${post.id}/category`] = targetCat.name;
+          }
+        });
+        if (Object.keys(updates).length > 0) {
+          await update(ref(db), updates);
+        }
+      }
+    } else {
+      // Delete posts in this category
+      const updates: Record<string, any> = {};
+      posts.forEach(post => {
+        if (post.category === catToDelete.name) {
+          updates[`posts/${post.id}`] = null;
+        }
+      });
+      if (Object.keys(updates).length > 0) {
+        await update(ref(db), updates);
+      }
+    }
+
     const catRef = ref(db, `categories/${id}`);
     await remove(catRef);
   };
@@ -352,11 +411,14 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     deleteComment,
     categories,
     addCategory,
+    updateCategory,
+    reorderCategories,
     deleteCategory,
     loading,
     isAdmin,
     login,
-    logout
+    logout,
+    checkNetwork
   }), [
     currentUser, currentPost, posts, favorites, categories, loading, isAdmin
   ]);

@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
-import { Moon, Sun, Monitor, Palette, ChevronRight, Check, Sparkles, ShieldCheck, BellRing, Lock, LogOut, User } from 'lucide-react';
+import { Moon, Sun, Monitor, Palette, ChevronRight, Check, Sparkles, ShieldCheck, BellRing, Lock, LogOut, User, Type } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useContent } from '../context/ContentContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
+const SettingSection = ({ title, children, icon: Icon }: { title: string, children: React.ReactNode, icon: any }) => (
+  <div className="space-y-4">
+    <div className="flex items-center space-x-2 space-x-reverse px-2">
+      <div className="w-8 h-8 rounded-lg bg-[var(--accent-color)]/10 flex items-center justify-center text-[var(--accent-color)]">
+        <Icon size={18} />
+      </div>
+      <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400">{title}</h2>
+    </div>
+    <div className="bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-100 dark:border-zinc-800 overflow-hidden shadow-sm">
+      {children}
+    </div>
+  </div>
+);
+
 const Settings: React.FC = () => {
-  const { mode, setMode, accentColor, setAccentColor } = useTheme();
+  const { mode, setMode, accentColor, setAccentColor, fontSize, setFontSize } = useTheme();
   const { isAdmin, login, logout, currentUser } = useContent();
   const navigate = useNavigate();
   const [showLogin, setShowLogin] = useState(false);
@@ -38,20 +52,6 @@ const Settings: React.FC = () => {
     '#6366f1', // Indigo
     '#14b8a6', // Teal
   ];
-
-  const SettingSection = ({ title, children, icon: Icon }: { title: string, children: React.ReactNode, icon: any }) => (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-2 space-x-reverse px-2">
-        <div className="w-8 h-8 rounded-lg bg-[var(--accent-color)]/10 flex items-center justify-center text-[var(--accent-color)]">
-          <Icon size={18} />
-        </div>
-        <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400">{title}</h2>
-      </div>
-      <div className="bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-100 dark:border-zinc-800 overflow-hidden shadow-sm">
-        {children}
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-10 pb-12">
@@ -122,6 +122,30 @@ const Settings: React.FC = () => {
                 )}
               </button>
             ))}
+          </div>
+        </div>
+      </SettingSection>
+
+      {/* Font Size Section */}
+      <SettingSection title="د خط اندازه (Font Size)" icon={Type}>
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-zinc-500">کوچنی</span>
+            <span className="text-lg font-bold text-zinc-800 dark:text-zinc-200">غټ</span>
+          </div>
+          <input 
+            type="range" 
+            min="14" 
+            max="24" 
+            step="1"
+            value={fontSize}
+            onChange={(e) => setFontSize(Number(e.target.value))}
+            className="w-full accent-[var(--accent-color)]"
+          />
+          <div className="mt-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+            <p style={{ fontSize: `${fontSize}px` }} className="text-center transition-all duration-200">
+              دا د خط نمونه ده.
+            </p>
           </div>
         </div>
       </SettingSection>
@@ -198,39 +222,40 @@ const Settings: React.FC = () => {
 
                 <AnimatePresence>
                   {showLogin && (
-                    <motion.form 
+                    <motion.div 
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      onSubmit={handleLogin}
-                      className="space-y-3 pt-2 overflow-hidden"
+                      className="overflow-hidden"
                     >
-                      <div className="space-y-1">
-                        <input
-                          type="text"
-                          placeholder="کارن نوم"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          className="w-full bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <input
-                          type="password"
-                          placeholder="پټ نوم"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="w-full bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20"
-                        />
-                      </div>
-                      {error && <p className="text-red-500 text-[10px] font-bold text-center">{error}</p>}
-                      <button
-                        type="submit"
-                        className="w-full bg-[var(--accent-color)] text-white font-bold py-3 rounded-xl shadow-lg shadow-[var(--accent-color)]/10 active:scale-95 transition-transform text-sm"
-                      >
-                        ننوتل
-                      </button>
-                    </motion.form>
+                      <form onSubmit={handleLogin} className="space-y-3 pt-2 pb-4 px-5">
+                        <div className="space-y-1">
+                          <input
+                            type="text"
+                            placeholder="کارن نوم"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="w-full bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <input
+                            type="password"
+                            placeholder="پټ نوم"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20"
+                          />
+                        </div>
+                        {error && <p className="text-red-500 text-[10px] font-bold text-center">{error}</p>}
+                        <button
+                          type="submit"
+                          className="w-full bg-[var(--accent-color)] text-white font-bold py-3 rounded-xl shadow-lg shadow-[var(--accent-color)]/10 active:scale-95 transition-transform text-sm"
+                        >
+                          ننوتل
+                        </button>
+                      </form>
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </div>
