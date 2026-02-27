@@ -9,16 +9,35 @@ const SplashAndRegister: React.FC<{ onComplete: () => void }> = ({ onComplete })
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const duration = 3000;
+    const interval = 30;
+    const step = (interval / duration) * 100;
+    
+    const timer = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(timer);
+          return 100;
+        }
+        return prev + step;
+      });
+    }, interval);
+
+    const completeTimer = setTimeout(() => {
       if (currentUser) {
         onComplete();
       } else {
         setShowSplash(false);
       }
-    }, 2500);
-    return () => clearTimeout(timer);
+    }, duration + 200);
+
+    return () => {
+      clearInterval(timer);
+      clearTimeout(completeTimer);
+    };
   }, [currentUser, onComplete]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -66,16 +85,30 @@ const SplashAndRegister: React.FC<{ onComplete: () => void }> = ({ onComplete })
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.8 }}
-              className="text-center mt-12 space-y-4"
+              className="text-center mt-12 space-y-6 w-full max-w-[280px]"
             >
-              <div className="inline-flex items-center space-x-2 space-x-reverse px-4 py-1.5 bg-[var(--accent-color)]/10 rounded-full border border-[var(--accent-color)]/20 mb-2">
-                <Moon size={14} className="text-[var(--accent-color)]" />
-                <span className="text-xs font-black uppercase tracking-widest text-[var(--accent-color)]">روژې مبارکې ډالۍ</span>
+              <div className="space-y-2">
+                <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-800 dark:text-zinc-100">اسلامي مطالب</h1>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium leading-relaxed">
+                  د دیني معلوماتو او ښکلو ویناوو غوره ټولګه
+                </p>
               </div>
-              <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-800 dark:text-zinc-100">اسلامي مطالب</h1>
-              <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base font-medium max-w-[250px] mx-auto leading-relaxed">
-                د دیني معلوماتو او ښکلو ویناوو غوره ټولګه
-              </p>
+
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-[var(--accent-color)]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ ease: "linear" }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                  <span>باریږي...</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         ) : (

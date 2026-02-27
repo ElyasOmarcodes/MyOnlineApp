@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useContent, Post } from '../context/ContentContext';
-import { motion } from 'motion/react';
-import { ChevronRight, Search, Heart, MessageSquare, Eye, ChevronLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronRight, Search, Heart, MessageSquare, Eye, ChevronLeft, Filter } from 'lucide-react';
 
 const CategoryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { posts, setCurrentPost, favorites, incrementViews } = useContent();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState<'title' | 'content' | 'both'>('both');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const search = params.get('search');
+    if (search) {
+      setSearchQuery(search);
+    }
+  }, [location.search]);
 
   const categoryName = id === 'all' ? 'ټول مطالب' : id;
   
@@ -16,9 +27,13 @@ const CategoryPage: React.FC = () => {
     ? posts 
     : posts.filter(p => p.category === id);
 
-  const filteredPosts = categoryPosts.filter(p => 
-    (p.title || '').includes(searchQuery) || (p.content || '').includes(searchQuery)
-  );
+  const filteredPosts = categoryPosts.filter(p => {
+    const q = searchQuery.toLowerCase();
+    if (!q) return true;
+    if (searchType === 'title') return (p.title || '').toLowerCase().includes(q);
+    if (searchType === 'content') return (p.content || '').toLowerCase().includes(q);
+    return (p.title || '').toLowerCase().includes(q) || (p.content || '').toLowerCase().includes(q);
+  });
 
   const handleView = (post: Post) => {
     incrementViews(post.id);
@@ -40,27 +55,77 @@ const CategoryPage: React.FC = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="relative group w-full">
-        <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none text-zinc-400 group-focus-within:text-[var(--accent-color)] transition-all duration-300 group-focus-within:scale-110">
-          <Search size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
-        </div>
-        <input
-          type="text"
-          placeholder="په دې کټګورۍ کې ولټوئ..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-white dark:bg-zinc-900 border-2 border-zinc-50 dark:border-zinc-800 rounded-[24px] sm:rounded-[28px] py-4 sm:py-5 pr-12 sm:pr-14 pl-12 sm:pl-14 text-sm sm:text-base font-bold placeholder:text-zinc-400 placeholder:font-medium focus:outline-none focus:ring-8 focus:ring-[var(--accent-color)]/5 focus:border-[var(--accent-color)] transition-all shadow-xl shadow-zinc-200/20 dark:shadow-none"
-        />
-        {searchQuery && (
-          <button 
-            onClick={() => setSearchQuery('')}
-            className="absolute inset-y-0 left-5 flex items-center text-zinc-300 hover:text-red-500 transition-colors"
-          >
-            <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-              <span className="text-xs font-black">✕</span>
+      <div className="relative w-full z-20">
+        <div className="relative group">
+          <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none text-zinc-400 group-focus-within:text-[var(--accent-color)] transition-all duration-300 group-focus-within:scale-110">
+            <Search size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
+          </div>
+          <input
+            type="text"
+            placeholder="په دې کټګورۍ کې ولټوئ..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white dark:bg-zinc-900 border-2 border-zinc-50 dark:border-zinc-800 rounded-[24px] sm:rounded-[28px] py-4 sm:py-5 pr-12 sm:pr-14 pl-14 sm:pl-16 text-sm sm:text-base font-bold placeholder:text-zinc-400 placeholder:font-medium focus:outline-none focus:ring-8 focus:ring-[var(--accent-color)]/5 focus:border-[var(--accent-color)] transition-all shadow-xl shadow-zinc-200/20 dark:shadow-none"
+          />
+          <div className="absolute inset-y-0 left-2 flex items-center space-x-1 space-x-reverse">
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
+              >
+                <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                  <span className="text-xs font-black">✕</span>
+                </div>
+              </button>
+            )}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                className={`p-2 rounded-xl transition-colors ${showFilterMenu || searchType !== 'both' ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/10' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+              >
+                <Filter size={20} />
+              </button>
+              
+              <AnimatePresence>
+                {showFilterMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute left-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden z-50"
+                    >
+                      <div className="p-2 space-y-1">
+                        <div className="px-3 py-2 text-[10px] font-black text-zinc-400 uppercase tracking-wider">پلټنه په:</div>
+                        {[
+                          { id: 'both', label: 'ټول (عنوان او متن)' },
+                          { id: 'title', label: 'یوازې عنوان کې' },
+                          { id: 'content', label: 'یوازې متن کې' }
+                        ].map(option => (
+                          <button
+                            key={option.id}
+                            onClick={() => {
+                              setSearchType(option.id as any);
+                              setShowFilterMenu(false);
+                            }}
+                            className={`w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                              searchType === option.id 
+                                ? 'bg-[var(--accent-color)]/10 text-[var(--accent-color)]' 
+                                : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
-          </button>
-        )}
+          </div>
+        </div>
       </div>
 
       {/* Posts List */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useContent } from '../context/ContentContext';
+import { useContent, Post } from '../context/ContentContext';
 import { useTheme } from '../context/ThemeContext';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -20,13 +20,17 @@ import {
   Eye,
   Edit3,
   Trash2,
-  Send,
-  Edit2
+  ChevronLeft,
+  Hash,
+  Search,
+  LayoutGrid,
+  Globe,
+  XCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Player: React.FC = () => {
-  const { currentPost: contextPost, favorites, toggleFavorite, likePost, isAdmin, deletePost, currentUser, addComment, editComment, deleteComment, checkNetwork } = useContent();
+  const { currentPost: contextPost, favorites, toggleFavorite, likePost, isAdmin, deletePost, currentUser, checkNetwork } = useContent();
   const { fontSize } = useTheme();
   const navigate = useNavigate();
   const [currentPost, setCurrentPost] = useState(contextPost);
@@ -34,16 +38,19 @@ const Player: React.FC = () => {
   const [liked, setLiked] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editCommentText, setEditCommentText] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  // Real-time listener for the specific post to ensure comments and likes are always up to date
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
+    
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
@@ -137,42 +144,7 @@ const Player: React.FC = () => {
     navigate('/admin');
   };
 
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (commentText.trim() && currentUser && currentPost) {
-      if (!(await checkNetwork())) {
-        setShowNetworkDialog(true);
-        return;
-      }
-      await addComment(currentPost.id, commentText.trim());
-      setCommentText('');
-    }
-  };
-
-  const handleEditCommentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editCommentText.trim() && editingCommentId && currentPost) {
-      if (!(await checkNetwork())) {
-        setShowNetworkDialog(true);
-        return;
-      }
-      await editComment(currentPost.id, editingCommentId, editCommentText.trim());
-      setEditingCommentId(null);
-      setEditCommentText('');
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    if (currentPost) {
-      if (!(await checkNetwork())) {
-        setShowNetworkDialog(true);
-        return;
-      }
-      await deleteComment(currentPost.id, commentId);
-    }
-  };
-
-  const commentsList = currentPost?.comments ? Object.entries(currentPost.comments).map(([id, data]) => ({ id, ...data })).sort((a, b) => b.timestamp - a.timestamp) : [];
+  const commentsList = currentPost?.comments ? Object.entries(currentPost.comments).map(([id, data]) => ({ id, ...data })) : [];
 
   const MAX_LENGTH = 500;
   const shouldTruncate = currentPost?.content && currentPost.content.length > MAX_LENGTH;
@@ -180,20 +152,74 @@ const Player: React.FC = () => {
     ? currentPost.content.substring(0, MAX_LENGTH) + '...' 
     : currentPost?.content;
 
+  // Extract hashtags
+  const hashtags = currentPost.content.match(/#[^\s#]+/g) || [];
+
+  const handleTagAction = (action: 'post' | 'category' | 'all') => {
+    if (!selectedTag) return;
+    const tag = selectedTag.replace('#', '');
+    
+    if (action === 'post') {
+      // Just highlight or scroll to it if we had a search in post feature
+      setSelectedTag(null);
+    } else if (action === 'category') {
+      navigate(`/category/${currentPost.category}?search=${tag}`);
+    } else {
+      navigate(`/?search=${tag}`);
+    }
+    setSelectedTag(null);
+  };
+
   return (
-    <div className="space-y-8 pb-24 pt-20">
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+      className="space-y-8 pb-32 pt-20"
+    >
       {/* Top Navigation - Pinned */}
-      <div className="fixed top-0 left-0 right-0 z-50 pt-safe bg-zinc-50/90 dark:bg-black/90 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50">
-        <div className="max-w-md mx-auto px-4 pb-3 pt-4 flex items-center justify-between">
+      <div className={`fixed top-0 left-0 right-0 z-50 pt-safe transition-all duration-300 ${
+        scrollY > 100 
+          ? 'bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50 shadow-sm' 
+          : 'bg-zinc-50/0 dark:bg-black/0'
+      }`}>
+        <div className="max-w-md mx-auto px-4 pb-3 pt-4 flex items-center justify-between relative">
           <button 
             onClick={() => navigate(-1)}
             className="p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 text-zinc-500 active:scale-90 transition-transform relative z-[60]"
           >
             <ChevronRight size={24} />
           </button>
-          <div className="text-center absolute left-0 right-0 pointer-events-none">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">د مطلب تفصیل</span>
+          
+          <div className="flex-1 px-4 text-center overflow-hidden">
+            <AnimatePresence mode="wait">
+              {scrollY > 150 ? (
+                <motion.div
+                  key="title"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="flex flex-col items-center"
+                >
+                  <span className="text-[10px] font-black text-[var(--accent-color)] uppercase tracking-widest truncate max-w-[150px]">
+                    {currentPost.category}
+                  </span>
+                  <h2 className="text-sm font-black truncate max-w-[200px]">{currentPost.title}</h2>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="default"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">د مطلب تفصیل</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+
           <button 
             onClick={() => toggleFavorite(currentPost.id)}
             className={`p-3 rounded-2xl shadow-sm border transition-all active:scale-90 relative z-[60] ${
@@ -211,7 +237,7 @@ const Player: React.FC = () => {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-4"
+        className="space-y-4 px-4"
       >
         <div className="flex items-center space-x-3 space-x-reverse">
           <span className="px-3 py-1 bg-[var(--accent-color)]/10 text-[var(--accent-color)] rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -255,7 +281,7 @@ const Player: React.FC = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="bg-white dark:bg-zinc-900 rounded-[40px] p-6 sm:p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm"
+        className="bg-white dark:bg-zinc-900 rounded-[40px] p-6 sm:p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm mx-4"
       >
         <div className="prose dark:prose-invert max-w-none">
           <p 
@@ -275,100 +301,48 @@ const Player: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Comments Section */}
+      {/* Hashtags Section */}
+      {hashtags.length > 0 && (
+        <div className="px-6 flex flex-wrap gap-2">
+          {hashtags.map((tag, i) => (
+            <button
+              key={i}
+              onClick={() => setSelectedTag(tag)}
+              className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl text-xs font-bold hover:bg-[var(--accent-color)]/10 hover:text-[var(--accent-color)] transition-colors flex items-center gap-1"
+            >
+              <Hash size={12} />
+              {tag.replace('#', '')}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Comments Link Section */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-white dark:bg-zinc-900 rounded-[40px] p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-6"
+        className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors mx-4"
+        onClick={() => navigate(`/comments/${currentPost.id}`)}
       >
-        <div className="flex items-center space-x-2 space-x-reverse">
-          <MessageSquare size={24} className="text-[var(--accent-color)]" />
-          <h2 className="text-xl font-black">نظریات ({commentsList.length})</h2>
+        <div className="flex items-center space-x-3 space-x-reverse">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--accent-color)]/10 text-[var(--accent-color)] flex items-center justify-center">
+            <MessageSquare size={24} />
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-zinc-800 dark:text-zinc-100">نظریات او کمنټونه</h2>
+            <p className="text-xs font-bold text-zinc-400 mt-0.5">
+              {commentsList.length > 0 ? `${commentsList.length} کمنټونه شوي دي` : 'تر اوسه کوم کمنټ نه دی شوی'}
+            </p>
+          </div>
         </div>
-
-        {/* Add Comment Form */}
-        <form onSubmit={handleAddComment} className="flex gap-2">
-          <input
-            type="text"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="خپل نظر ولیکئ..."
-            className="flex-1 bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)] transition-all font-bold text-sm"
-          />
-          <button
-            type="submit"
-            disabled={!commentText.trim()}
-            className="bg-[var(--accent-color)] text-white px-4 rounded-xl flex items-center justify-center disabled:opacity-50 active:scale-95 transition-transform"
-          >
-            <Send size={18} />
-          </button>
-        </form>
-
-        {/* Comments List */}
-        <div className="space-y-4 mt-6">
-          {commentsList.map(comment => (
-            <div key={comment.id} className="bg-zinc-50 dark:bg-black rounded-3xl p-5 border border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-3 space-x-reverse">
-                  <div className="w-10 h-10 rounded-full bg-[var(--accent-color)]/10 text-[var(--accent-color)] flex items-center justify-center font-black text-lg">
-                    {comment.userName?.charAt(0) || '?'}
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm">{comment.userName}</div>
-                    <div className="text-[10px] text-zinc-400 font-mono">{new Date(comment.timestamp).toLocaleString('fa-AF')}</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  {(currentUser?.id === comment.userId) && (
-                    <button 
-                      onClick={() => {
-                        setEditingCommentId(comment.id);
-                        setEditCommentText(comment.text);
-                      }}
-                      className="text-zinc-400 hover:text-[var(--accent-color)] p-2"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                  )}
-                  {(isAdmin || currentUser?.id === comment.userId) && (
-                    <button 
-                      onClick={() => handleDeleteComment(comment.id)}
-                      className="text-zinc-400 hover:text-red-500 p-2"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {editingCommentId === comment.id ? (
-                <form onSubmit={handleEditCommentSubmit} className="flex gap-2 mt-3">
-                  <input
-                    type="text"
-                    value={editCommentText}
-                    onChange={(e) => setEditCommentText(e.target.value)}
-                    className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2 px-4 focus:outline-none focus:border-[var(--accent-color)] text-sm"
-                  />
-                  <button type="submit" className="bg-[var(--accent-color)] text-white px-4 rounded-xl text-sm font-bold">ساتل</button>
-                  <button type="button" onClick={() => setEditingCommentId(null)} className="bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-4 rounded-xl text-sm font-bold">لغوه</button>
-                </form>
-              ) : (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2 leading-relaxed">{comment.text}</p>
-              )}
-            </div>
-          ))}
-          {commentsList.length === 0 && (
-            <div className="text-center py-8 text-zinc-400 font-bold text-sm">
-              تر اوسه کوم نظر نه دی ورکړل شوی. لومړنی کس اوسئ!
-            </div>
-          )}
+        <div className="w-10 h-10 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+          <ChevronLeft size={20} />
         </div>
       </motion.div>
 
-      {/* Action Bar */}
-      <div className="fixed bottom-24 left-4 right-4 z-40 mb-safe">
+      {/* Action Bar - Absolute Bottom */}
+      <div className="fixed bottom-6 left-4 right-4 z-40 mb-safe">
         <div className="max-w-md mx-auto bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl border border-white/20 dark:border-zinc-800/20 rounded-[32px] shadow-2xl p-2">
           <div className="flex items-center justify-around">
             <button 
@@ -410,6 +384,61 @@ const Player: React.FC = () => {
         </div>
       </div>
 
+      {/* Tag Action Menu */}
+      <AnimatePresence>
+        {selectedTag && (
+          <>
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]" onClick={() => setSelectedTag(null)} />
+            <motion.div
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              className="fixed bottom-0 left-0 right-0 z-[110] bg-white dark:bg-zinc-900 rounded-t-[40px] p-6 pb-safe shadow-2xl border-t border-zinc-100 dark:border-zinc-800"
+            >
+              <div className="max-w-md mx-auto space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-[var(--accent-color)]/10 text-[var(--accent-color)] flex items-center justify-center">
+                      <Hash size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black">{selectedTag}</h3>
+                      <p className="text-xs font-bold text-zinc-400">د دې ټګ لپاره پلټنه وکړئ</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedTag(null)} className="p-2 text-zinc-400">
+                    <XCircle size={24} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <button 
+                    onClick={() => handleTagAction('category')}
+                    className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl flex items-center justify-between hover:bg-[var(--accent-color)] hover:text-white transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <LayoutGrid size={20} className="text-zinc-400 group-hover:text-white" />
+                      <span className="font-bold">په دې کټګورۍ کې</span>
+                    </div>
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button 
+                    onClick={() => handleTagAction('all')}
+                    className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl flex items-center justify-between hover:bg-[var(--accent-color)] hover:text-white transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Globe size={20} className="text-zinc-400 group-hover:text-white" />
+                      <span className="font-bold">په ټول اپلیکیشن کې</span>
+                    </div>
+                    <ChevronLeft size={18} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <ConfirmDialog
         isOpen={showDeleteConfirm}
         title="مطلب حذف کول"
@@ -422,7 +451,7 @@ const Player: React.FC = () => {
         isOpen={showNetworkDialog} 
         onClose={() => setShowNetworkDialog(false)} 
       />
-    </div>
+    </motion.div>
   );
 };
 

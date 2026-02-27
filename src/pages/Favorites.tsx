@@ -33,14 +33,27 @@ const Favorites: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-12">
-      <header className="relative py-8 px-4 overflow-hidden rounded-[40px] bg-gradient-to-br from-zinc-900 to-black text-white shadow-2xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--accent-color)]/20 rounded-full blur-[80px] -mr-32 -mt-32" />
-        <div className="relative z-10 space-y-2">
-          <h1 className="text-4xl font-black tracking-tight">خوښ شوي</h1>
-          <p className="text-zinc-400 text-sm font-medium">ستاسو د خوښې وړ لیکنو ټولګه</p>
+      <header className="relative overflow-hidden rounded-[32px] sm:rounded-[40px] bg-red-500 p-6 sm:p-8 text-white shadow-xl shadow-red-500/20">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+          <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M0 100 C 20 0 50 0 100 100 Z" fill="currentColor" />
+          </svg>
         </div>
-        <div className="absolute bottom-4 left-6 opacity-20">
-          <MessageSquare size={80} strokeWidth={1} />
+        <div className="absolute -bottom-4 -left-4 opacity-20 rotate-12">
+          <Heart size={120} fill="currentColor" strokeWidth={0} />
+        </div>
+        
+        <div className="relative z-10 space-y-3">
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-md">
+              <Heart size={16} fill="currentColor" />
+            </div>
+            <span className="text-xs font-medium opacity-90">ستاسو خوښ شوي</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black leading-tight">خوښ شوي مطالب</h1>
+          <p className="text-white/80 text-xs sm:text-sm max-w-[240px]">
+            دلته ستاسو د خوښې وړ لیکنو او مطالبو ټولګه ده.
+          </p>
         </div>
       </header>
 

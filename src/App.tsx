@@ -18,9 +18,13 @@ import Favorites from './pages/Favorites';
 import Settings from './pages/Settings';
 import About from './pages/About';
 import Admin from './pages/Admin';
+import AdminPosts from './pages/AdminPosts';
+import AdminCategories from './pages/AdminCategories';
+import AdminTopPosts from './pages/AdminTopPosts';
 import CategoryPage from './pages/CategoryPage';
 import SplashAndRegister from './components/SplashAndRegister';
 import ProfileEdit from './pages/ProfileEdit';
+import Comments from './pages/Comments';
 
 function CapacitorHandler({ onExitRequest }: { onExitRequest: () => void }) {
   const navigate = useNavigate();
@@ -96,8 +100,12 @@ function AppContent() {
           <Route path="settings" element={<Settings />} />
           <Route path="about" element={<About />} />
           <Route path="admin" element={<Admin />} />
+          <Route path="admin/posts" element={<AdminPosts />} />
+          <Route path="admin/categories" element={<AdminCategories />} />
+          <Route path="admin/top-posts" element={<AdminTopPosts />} />
           <Route path="category/:id" element={<CategoryPage />} />
           <Route path="profile-edit" element={<ProfileEdit />} />
+          <Route path="comments/:id" element={<Comments />} />
         </Route>
       </Routes>
       <ConfirmDialog

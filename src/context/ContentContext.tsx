@@ -9,8 +9,12 @@ export interface Comment {
   id: string;
   userId: string;
   userName: string;
+  userColor?: string;
   text: string;
   timestamp: number;
+  likes?: number;
+  likedBy?: Record<string, boolean>;
+  parentId?: string;
 }
 
 export interface Post {
@@ -35,6 +39,7 @@ export interface User {
   id: string;
   name: string;
   phone: string;
+  color: string;
 }
 
 interface ContentContextType {
@@ -51,14 +56,18 @@ interface ContentContextType {
   addPost: (title: string, content: string, category: string) => Promise<void>;
   updatePost: (id: string, title: string, content: string, category: string) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
-  addComment: (postId: string, text: string) => Promise<void>;
+  addComment: (postId: string, text: string, parentId?: string) => Promise<void>;
   editComment: (postId: string, commentId: string, text: string) => Promise<void>;
   deleteComment: (postId: string, commentId: string) => Promise<void>;
+  likeComment: (postId: string, commentId: string) => Promise<void>;
   categories: Category[];
   addCategory: (name: string, icon: string) => Promise<void>;
   updateCategory: (id: string, name: string, icon: string) => Promise<void>;
   reorderCategories: (newOrder: Category[]) => Promise<void>;
   deleteCategory: (id: string, migrateToId?: string) => Promise<void>;
+  topPosts: Post[];
+  addTopPost: (title: string, content: string) => Promise<void>;
+  deleteTopPost: (id: string) => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
   login: (user: string, pass: string) => boolean;
@@ -68,10 +77,25 @@ interface ContentContextType {
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
+const USER_COLORS = [
+  '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6',
+  '#ec4899', '#f97316', '#06b6d4', '#6366f1', '#14b8a6',
+  '#f43f5e', '#84cc16', '#0ea5e9', '#d946ef', '#0891b2'
+];
+
 export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [posts, setPosts] = useState<Post[]>(() => {
     try {
       const saved = localStorage.getItem('cached_posts');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [topPosts, setTopPosts] = useState<Post[]>(() => {
+    try {
+      const saved = localStorage.getItem('cached_top_posts');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
@@ -97,7 +121,16 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('app_user');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        const user = JSON.parse(saved);
+        // Ensure existing users get a color if they don't have one
+        if (user && !user.color) {
+          user.color = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+          localStorage.setItem('app_user', JSON.stringify(user));
+        }
+        return user;
+      }
+      return null;
     } catch (e) {
       return null;
     }
@@ -174,6 +207,26 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setLoading(false);
     });
 
+    const topPostsRef = ref(db, 'topPosts');
+    const unsubscribeTopPosts = onValue(topPostsRef, (snapshot) => {
+      try {
+        const data = snapshot.val();
+        if (data) {
+          const list = Object.entries(data).map(([key, value]: [string, any]) => ({
+            id: key,
+            ...value,
+          })).sort((a, b) => b.timestamp - a.timestamp);
+          setTopPosts(list);
+          localStorage.setItem('cached_top_posts', JSON.stringify(list));
+        } else {
+          setTopPosts([]);
+          localStorage.setItem('cached_top_posts', JSON.stringify([]));
+        }
+      } catch (err) {
+        console.error("Error parsing top posts:", err);
+      }
+    });
+
     const categoriesRef = ref(db, 'categories');
     const unsubscribeCategories = onValue(categoriesRef, (snapshot) => {
       try {
@@ -209,6 +262,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return () => {
       unsubscribePosts();
+      unsubscribeTopPosts();
       unsubscribeCategories();
     };
   }, []);
@@ -222,10 +276,12 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [viewedPosts]);
 
   const registerUser = (name: string, phone: string) => {
+    const randomColor = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
     const newUser: User = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       name,
-      phone
+      phone,
+      color: randomColor
     };
     setCurrentUser(newUser);
     localStorage.setItem('app_user', JSON.stringify(newUser));
@@ -233,7 +289,8 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateUser = (name: string, phone: string) => {
     if (currentUser) {
-      const updatedUser = { ...currentUser, name, phone };
+      const color = currentUser.color || USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+      const updatedUser = { ...currentUser, name, phone, color };
       setCurrentUser(updatedUser);
       localStorage.setItem('app_user', JSON.stringify(updatedUser));
     }
@@ -356,16 +413,38 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await remove(catRef);
   };
 
-  const addComment = async (postId: string, text: string) => {
+  const addComment = async (postId: string, text: string, parentId?: string) => {
     if (!currentUser) return;
     const commentsRef = ref(db, `posts/${postId}/comments`);
     const newCommentRef = push(commentsRef);
-    await set(newCommentRef, {
+    const commentData: any = {
       userId: currentUser.id,
       userName: currentUser.name,
+      userColor: currentUser.color || USER_COLORS[0],
       text,
-      timestamp: Date.now()
-    });
+      timestamp: Date.now(),
+      likes: 0
+    };
+    if (parentId) {
+      commentData.parentId = parentId;
+    }
+    await set(newCommentRef, commentData);
+  };
+
+  const likeComment = async (postId: string, commentId: string) => {
+    if (!currentUser) return;
+    const post = posts.find(p => p.id === postId);
+    if (post && post.comments && post.comments[commentId]) {
+      const comment = post.comments[commentId];
+      const likedBy = comment.likedBy || {};
+      if (likedBy[currentUser.id]) return; // Already liked
+
+      const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
+      await update(commentRef, {
+        likes: (comment.likes || 0) + 1,
+        [`likedBy/${currentUser.id}`]: true
+      });
+    }
   };
 
   const editComment = async (postId: string, commentId: string, text: string) => {
@@ -376,6 +455,27 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deleteComment = async (postId: string, commentId: string) => {
     const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
     await remove(commentRef);
+  };
+
+  const addTopPost = async (title: string, content: string) => {
+    const topRef = ref(db, 'topPosts');
+    const newTopRef = push(topRef);
+    
+    // Maintain only 10 latest
+    if (topPosts.length >= 10) {
+      const oldest = topPosts[topPosts.length - 1];
+      await remove(ref(db, `topPosts/${oldest.id}`));
+    }
+
+    await set(newTopRef, {
+      title,
+      content,
+      timestamp: Date.now()
+    });
+  };
+
+  const deleteTopPost = async (id: string) => {
+    await remove(ref(db, `topPosts/${id}`));
   };
 
   const login = (user: string, pass: string) => {
@@ -409,18 +509,22 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addComment,
     editComment,
     deleteComment,
+    likeComment,
     categories,
     addCategory,
     updateCategory,
     reorderCategories,
     deleteCategory,
+    topPosts,
+    addTopPost,
+    deleteTopPost,
     loading,
     isAdmin,
     login,
     logout,
     checkNetwork
   }), [
-    currentUser, currentPost, posts, favorites, categories, loading, isAdmin
+    currentUser, currentPost, posts, favorites, categories, topPosts, loading, isAdmin
   ]);
 
   return (

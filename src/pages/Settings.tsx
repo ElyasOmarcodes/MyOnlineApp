@@ -76,7 +76,10 @@ const Settings: React.FC = () => {
             className="w-full flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors rounded-xl p-2"
           >
             <div className="flex items-center space-x-4 space-x-reverse">
-              <div className="w-12 h-12 rounded-full bg-[var(--accent-color)]/10 text-[var(--accent-color)] flex items-center justify-center font-black text-xl">
+              <div 
+                className="w-12 h-12 rounded-full flex items-center justify-center font-black text-xl text-white shadow-md"
+                style={{ backgroundColor: currentUser?.color || 'var(--accent-color)' }}
+              >
                 {currentUser?.name?.charAt(0) || 'U'}
               </div>
               <div className="text-right">
