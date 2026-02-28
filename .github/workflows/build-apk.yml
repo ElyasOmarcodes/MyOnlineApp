@@ -1,72 +1,130 @@
-name: Build Android APK
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
+import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { ContentProvider } from './context/ContentContext';
+import ConfirmDialog from './components/ConfirmDialog';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import Player from './pages/Player';
+import Favorites from './pages/Favorites';
+import Settings from './pages/Settings';
+import About from './pages/About';
+import Admin from './pages/Admin';
+import AdminPosts from './pages/AdminPosts';
+import AdminCategories from './pages/AdminCategories';
+import AdminTopPosts from './pages/AdminTopPosts';
+import CategoryPage from './pages/CategoryPage';
+import SplashAndRegister from './components/SplashAndRegister';
+import ProfileEdit from './pages/ProfileEdit';
+import Comments from './pages/Comments';
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+function CapacitorHandler({ onExitRequest }: { onExitRequest: () => void }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { mode } = useTheme();
 
-      - name: Setup Java JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'zulu'
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
 
-      - name: Install dependencies
-        run: |
-          npm install
-          # د ستونزې د حل لپاره د نیویګیشن کتابتون انسټالول
-          npm install @react-navigation/native
-          # د Capacitor اړین کتابتونونه انسټالول
-          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem
+    let backListener: any = null;
 
-      - name: Build Web App
-        run: npm run build
+    const initCapacitor = async () => {
+      try {
+        // Handle Android Back Button
+        if (CapApp && typeof CapApp.addListener === 'function') {
+          backListener = await CapApp.addListener('backButton', ({ canGoBack }) => {
+            if (location.pathname === '/') {
+              onExitRequest();
+            } else {
+              navigate(-1);
+            }
+          });
+        }
 
-      - name: Sync with Capacitor
-        run: |
-          if [ ! -f "capacitor.config.json" ] && [ ! -f "capacitor.config.ts" ]; then
-            npx cap init "طیب الکلام" "com.elyas.ktayyeb" --web-dir dist
-          fi
-          npx cap add android
-          npx cap sync android
+        // Configure Status Bar
+        if (StatusBar && typeof StatusBar.setOverlaysWebView === 'function') {
+          await StatusBar.setOverlaysWebView({ overlay: true });
+          if (mode === 'dark') {
+            await StatusBar.setStyle({ style: Style.Dark });
+          } else {
+            await StatusBar.setStyle({ style: Style.Light });
+          }
+        }
+      } catch (e) {
+        console.warn('Capacitor plugins failed', e);
+      }
+    };
 
-      - name: Generate Icon
-        run: |
-          if [ -f "logo.png" ]; then
-            mkdir -p assets
-            cp logo.png assets/icon.png
-            npx capacitor-assets generate --android
-          else
-            echo "Warning: logo.png not found, skipping icon generation."
-          fi
+    initCapacitor();
 
-      - name: Inject Permissions and Fix Name
-        run: |
-          cd android/app/src/main
-          sed -i 's/<application/<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
-          sed -i 's/<application/<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"/g' AndroidManifest.xml
+    return () => {
+      if (backListener) {
+        backListener.remove();
+      }
+    };
+  }, [navigate, location, mode]);
 
-      - name: Build Android APK
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
+  return null;
+}
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Tayyab-Al-Kalam-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+function AppContent() {
+  const [isReady, setIsReady] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  if (!isReady) {
+    return <SplashAndRegister onComplete={() => setIsReady(true)} />;
+  }
+
+  const handleExitConfirm = () => {
+    if (Capacitor.isNativePlatform()) {
+      CapApp.exitApp();
+    }
+  };
+
+  return (
+    <BrowserRouter>
+      <CapacitorHandler onExitRequest={() => setShowExitConfirm(true)} />
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="player" element={<Player />} />
+          <Route path="favorites" element={<Favorites />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="about" element={<About />} />
+          <Route path="admin" element={<Admin />} />
+          <Route path="admin/posts" element={<AdminPosts />} />
+          <Route path="admin/categories" element={<AdminCategories />} />
+          <Route path="admin/top-posts" element={<AdminTopPosts />} />
+          <Route path="category/:id" element={<CategoryPage />} />
+          <Route path="profile-edit" element={<ProfileEdit />} />
+          <Route path="comments/:id" element={<Comments />} />
+        </Route>
+      </Routes>
+      <ConfirmDialog
+        isOpen={showExitConfirm}
+        title="وتل"
+        message="ایا غواړئ چې له اپلیکیشن څخه ووځئ؟"
+        onConfirm={handleExitConfirm}
+        onCancel={() => setShowExitConfirm(false)}
+      />
+    </BrowserRouter>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <ContentProvider>
+        <AppContent />
+      </ContentProvider>
+    </ThemeProvider>
+  );
+}
