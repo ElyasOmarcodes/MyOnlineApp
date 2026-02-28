@@ -2,7 +2,7 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # د دې په مرسته کولای شئ له GitHub څخه په لاسي ډول هم بلډ پیل کړئ
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,43 +13,36 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # ۱. د Node.js اضافه کول
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # ۲. د جاوا ۱۷ اضافه کول (د Capacitor او Android لپاره تر ټولو غوره نسخه)
       - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'zulu'
 
-      # ۳. د اړینو کتابتونونو انسټالول
       - name: Install dependencies
         run: |
           npm install
-          # د هغه کتابتون انسټالول چې د بلډ په وخت کې یې ستونزه جوړه کړې وه
+          # د ستونزې د حل لپاره د نیویګیشن کتابتون انسټالول
           npm install @react-navigation/native
           # د Capacitor اړین کتابتونونه انسټالول
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem
 
-      # ۴. د ویب اپلیکیشن بلډ کول (Build)
       - name: Build Web App
         run: npm run build
 
-      # ۵. د Capacitor سره وصلول او انډرایډ فولډر جوړول
       - name: Sync with Capacitor
         run: |
-          # که فایل مخکې نه وي جوړ شوی، نو نوی یې جوړ کړه ترڅو پروسه ونه دریږي
           if [ ! -f "capacitor.config.json" ] && [ ! -f "capacitor.config.ts" ]; then
             npx cap init "طیب الکلام" "com.elyas.ktayyeb" --web-dir dist
           fi
           npx cap add android
           npx cap sync android
 
-      # ۶. د آیکن برخه
       - name: Generate Icon
         run: |
           if [ -f "logo.png" ]; then
@@ -60,25 +53,18 @@ jobs:
             echo "Warning: logo.png not found, skipping icon generation."
           fi
 
-      # ۷. د اجازې (Permissions) برخه
       - name: Inject Permissions and Fix Name
         run: |
           cd android/app/src/main
-          
-          # د سټوریج اجازې زیاتول
           sed -i 's/<application/<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
-          
-          # د ډاونلوډ لپاره "ClearText" او "Legacy Storage" فعاله کول
           sed -i 's/<application/<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"/g' AndroidManifest.xml
 
-      # ۸. د APK جوړول
       - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # ۹. د APK اپلوډ ترڅو تاسو یې ډاونلوډ کړئ
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
