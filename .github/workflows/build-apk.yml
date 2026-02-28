@@ -1,0 +1,74 @@
+name: Build Capacitor Android APK (Tayyeb Al-Kalam)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # د کوډ د بدلون اجازه
+      
+    steps:
+      # ۱. کوډ را ښکته کول
+      - uses: actions/checkout@v4
+
+      # ۲. د Node.js انسټالول
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ۳. د جاوا ۲۱ انسټالول (ستاسو د غوښتنې مطابق)
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'zulu'
+
+      # ۴. د کتابتونونو انسټالول
+      - name: Install dependencies
+        run: npm install
+
+      # ۵. د ویب پاڼې بلډ کول (React Build)
+      - name: Build Web App
+        run: npm run build
+        # یادونه: که ستاسو د بلډ کمانډ 'npm run dist' وي، دلته یې بدل کړئ
+
+      # ۶. د انډرایډ فولډر جوړول یا تازه کول
+      # که مو فولډر مخکې نه وي جوړ کړی، دا یې جوړوي
+      - name: Add/Sync Android Platform
+        run: |
+          npm install @capacitor/android
+          npx cap add android || npx cap sync android
+
+      # ۷. نوم، پکیج او پرمیشن بدلول (مهم ترین ګام)
+      - name: Configure App Name & Package & Permissions
+        run: |
+          # د اپلیکیشن نوم "طیب الکلام" ته بدلول
+          sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">طیب الکلام<\/string>/' android/app/src/main/res/values/strings.xml
+          
+          # د پکیج نوم (Package Name) بدلول
+          sed -i 's/applicationId ".*"/applicationId "com.elyas.ktayyeb"/' android/app/build.gradle
+          
+          # ډاډ ترلاسه کول چې انټرنیټ پرمیشن شتون لري (فایربیس لپاره)
+          grep -q "android.permission.INTERNET" android/app/src/main/AndroidManifest.xml || sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+
+      # ۸. وروستی سینک (Sync) ترڅو نوي تنظیمات ځای پر ځای شي
+      - name: Final Capacitor Sync
+        run: npx cap sync android
+
+      # ۹. د APK جوړول
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # ۱۰. د APK اپلوډ کول (ډاؤنلوډ لپاره)
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tayyeb-Al-Kalam-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
