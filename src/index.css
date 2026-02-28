@@ -12,8 +12,20 @@
 }
 
 @layer base {
-  html {
+  html, body {
+    overscroll-behavior-y: none;
+  }
+
+  * {
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input, textarea {
+    -webkit-user-select: auto;
+    user-select: auto;
   }
   
   body {
