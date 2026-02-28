@@ -28,8 +28,8 @@ jobs:
       - name: Install dependencies
         run: |
           npm install --legacy-peer-deps
-          # د نیویګیشن (Navigation) ورک شوي کتابتونونه انسټالول
-          npm install @react-navigation/native @react-navigation/native-stack react-native-screens react-native-safe-area-context --legacy-peer-deps
+          # د نیویګیشن ټولې برخې (Native, Stack, او اوس Bottom Tabs)
+          npm install @react-navigation/native @react-navigation/native-stack @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context --legacy-peer-deps
           # د Capacitor اړین کتابتونونه
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem --legacy-peer-deps
 
