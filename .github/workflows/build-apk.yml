@@ -26,15 +26,20 @@ jobs:
           java-version: '17'
           distribution: 'zulu'
 
+      # ۳. د اړینو کتابتونونو انسټالول
       - name: Install dependencies
         run: |
           npm install
+          # د هغه کتابتون انسټالول چې د بلډ په وخت کې یې ستونزه جوړه کړې وه
+          npm install @react-navigation/native
           # د Capacitor اړین کتابتونونه انسټالول
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem
 
+      # ۴. د ویب اپلیکیشن بلډ کول (Build)
       - name: Build Web App
         run: npm run build
 
+      # ۵. د Capacitor سره وصلول او انډرایډ فولډر جوړول
       - name: Sync with Capacitor
         run: |
           # که فایل مخکې نه وي جوړ شوی، نو نوی یې جوړ کړه ترڅو پروسه ونه دریږي
@@ -44,7 +49,7 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      # ۳. د آیکن برخه
+      # ۶. د آیکن برخه
       - name: Generate Icon
         run: |
           if [ -f "logo.png" ]; then
@@ -55,7 +60,7 @@ jobs:
             echo "Warning: logo.png not found, skipping icon generation."
           fi
 
-      # ۴. د اجازې (Permissions) برخه
+      # ۷. د اجازې (Permissions) برخه
       - name: Inject Permissions and Fix Name
         run: |
           cd android/app/src/main
@@ -66,14 +71,14 @@ jobs:
           # د ډاونلوډ لپاره "ClearText" او "Legacy Storage" فعاله کول
           sed -i 's/<application/<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"/g' AndroidManifest.xml
 
-      # ۵. د APK جوړول
+      # ۸. د APK جوړول
       - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # ۶. د APK اپلوډ ترڅو تاسو یې ډاونلوډ کړئ
+      # ۹. د APK اپلوډ ترڅو تاسو یې ډاونلوډ کړئ
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
