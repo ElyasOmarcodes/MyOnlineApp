@@ -1,5 +1,4 @@
-name: Build Capacitor Android APK (Tayyeb Al-Kalam)
-
+name: Build Android APK (Tayyeb Al-Kalam)
 on:
   push:
     branches: [ main ]
@@ -8,56 +7,82 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # د کوډ د بدلون اجازه
-      
+      contents: write
     steps:
-      # ۱. کوډ را ښکته کول
       - uses: actions/checkout@v4
 
-      # ۲. د Node.js انسټالول
+      # ۱. د Node.js اضافه کول
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # ۳. د جاوا ۲۱ انسټالول (ستاسو د غوښتنې مطابق)
-      - name: Setup JDK 21
+      # ۲. د جاوا ۲۱ تنظیمول (ستاسو د خوښې مطابق)
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'zulu'
 
-      # ۴. د کتابتونونو انسټالول
+      # ۳. د کتابتونونو انسټالول (دلته مې --legacy-peer-deps اضافه کړ)
+      # دا هغه ځای دی چې ستاسو مخکینی ارور یې حل کړ
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install --legacy-peer-deps
+          # د Capacitor اړین کتابتونونه
+          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem --legacy-peer-deps
 
-      # ۵. د ویب پاڼې بلډ کول (React Build)
+      # ۴. د ویب پاڼې بلډ کول
       - name: Build Web App
         run: npm run build
-        # یادونه: که ستاسو د بلډ کمانډ 'npm run dist' وي، دلته یې بدل کړئ
 
-      # ۶. د انډرایډ فولډر جوړول یا تازه کول
-      # که مو فولډر مخکې نه وي جوړ کړی، دا یې جوړوي
-      - name: Add/Sync Android Platform
+      # ۵. د Capacitor تنظیم او د نوم/پکیج تغیر
+      - name: Setup Capacitor & Android
         run: |
-          npm install @capacitor/android
-          npx cap add android || npx cap sync android
+          # که پخوانی فایل وي لیرې یې کړه ترڅو نوی نوم واخلي
+          rm -f capacitor.config.json capacitor.config.ts
+          
+          # نوی نوم "طیب الکلام" او نوی پکیج "com.elyas.ktayyeb"
+          npx cap init "طیب الکلام" "com.elyas.ktayyeb" --web-dir dist
+          npx cap add android
+          npx cap sync android
 
-      # ۷. نوم، پکیج او پرمیشن بدلول (مهم ترین ګام)
-      - name: Configure App Name & Package & Permissions
+      # ۶. د آیکن برخه (که logo.png شتون ولري)
+      - name: Generate Icon
         run: |
-          # د اپلیکیشن نوم "طیب الکلام" ته بدلول
-          sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">طیب الکلام<\/string>/' android/app/src/main/res/values/strings.xml
-          
-          # د پکیج نوم (Package Name) بدلول
-          sed -i 's/applicationId ".*"/applicationId "com.elyas.ktayyeb"/' android/app/build.gradle
-          
-          # ډاډ ترلاسه کول چې انټرنیټ پرمیشن شتون لري (فایربیس لپاره)
-          grep -q "android.permission.INTERNET" android/app/src/main/AndroidManifest.xml || sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+          if [ -f "logo.png" ]; then
+            npm install @capacitor/assets --legacy-peer-deps
+            npx capacitor-assets generate --android
+          else
+            echo "Warning: logo.png not found, skipping icon generation."
+          fi
 
-      # ۸. وروستی سینک (Sync) ترڅو نوي تنظیمات ځای پر ځای شي
-      - name: Final Capacitor Sync
-        run: npx cap sync android
+      # ۷. د اجازې (Permissions) او انټرنیټ تنظیمات
+      - name: Inject Permissions
+        run: |
+          # فولډر ته ورننوځه
+          cd android/app/src/main
+          
+          # انټرنیټ او سټوریج اجازې ورکول
+          sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
+          
+          # د ClearText ټرافیک فعالول (د فایربیس او انټرنیټ لپاره مهم)
+          sed -i 's/<application/<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"/g' AndroidManifest.xml
+
+      # ۸. د Kotlin ستونزې حل (ستاسو پخوانی کوډ)
+      - name: Fix Kotlin Dependency Conflict
+        run: |
+          cd android
+          echo "" >> build.gradle
+          echo "allprojects {" >> build.gradle
+          echo "    configurations.all {" >> build.gradle
+          echo "        resolutionStrategy {" >> build.gradle
+          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'" >> build.gradle
+          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22'" >> build.gradle
+          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'" >> build.gradle
+          echo "        }" >> build.gradle
+          echo "    }" >> build.gradle
+          echo "}" >> build.gradle
 
       # ۹. د APK جوړول
       - name: Build Android APK
@@ -66,9 +91,9 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # ۱۰. د APK اپلوډ کول (ډاؤنلوډ لپاره)
+      # ۱۰. د APK اپلوډ کول
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Tayyeb-Al-Kalam-APK
+          name: Tayyab-Al-Kalam-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
