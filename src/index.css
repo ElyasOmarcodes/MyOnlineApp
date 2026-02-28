@@ -12,24 +12,21 @@
 }
 
 @layer base {
-  html, body {
-    overscroll-behavior-y: none;
-  }
-
-  * {
+  html {
     -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
-  input, textarea {
-    -webkit-user-select: auto;
-    user-select: auto;
+    overscroll-behavior: none;
   }
   
   body {
     @apply bg-zinc-50 dark:bg-black transition-colors duration-300;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: none;
+  }
+
+  input, textarea {
+    user-select: auto;
+    -webkit-user-select: auto;
   }
 }
 
