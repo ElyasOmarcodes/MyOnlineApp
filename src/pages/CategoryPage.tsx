@@ -1,25 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { useContent, Post } from '../context/ContentContext';
-import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, Search, Heart, MessageSquare, Eye, ChevronLeft, Filter } from 'lucide-react';
+import { ChevronRight, Search, Heart, MessageSquare, Eye, ChevronLeft, Filter, X } from 'lucide-react';
+
+type ParamList = {
+  Category: { id: string; search?: string };
+};
 
 const CategoryPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const route = useRoute<RouteProp<ParamList, 'Category'>>();
+  const navigation = useNavigation<any>();
+  const id = route.params?.id || 'all';
+  const initialSearch = route.params?.search || '';
+  
   const { posts, setCurrentPost, favorites, incrementViews } = useContent();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [searchType, setSearchType] = useState<'title' | 'content' | 'both'>('both');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const search = params.get('search');
-    if (search) {
-      setSearchQuery(search);
-    }
-  }, [location.search]);
 
   const categoryName = id === 'all' ? 'ټول مطالب' : id;
   
@@ -38,167 +36,368 @@ const CategoryPage: React.FC = () => {
   const handleView = (post: Post) => {
     incrementViews(post.id);
     setCurrentPost(post);
-    navigate('/player');
+    navigation.navigate('Player');
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <View style={styles.container}>
       {/* Header */}
-      <div className="flex items-center space-x-4 space-x-reverse py-2">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 text-zinc-500 active:scale-90 transition-transform"
+      <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
         >
-          <ChevronRight size={24} />
-        </button>
-        <h1 className="text-2xl font-black">{categoryName}</h1>
-      </div>
+          <ChevronRight size={24} color="#717a8b" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{categoryName}</Text>
+      </View>
 
       {/* Search Bar */}
-      <div className="relative w-full z-20">
-        <div className="relative group">
-          <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none text-zinc-400 group-focus-within:text-[var(--accent-color)] transition-all duration-300 group-focus-within:scale-110">
-            <Search size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
-          </div>
-          <input
-            type="text"
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputWrapper}>
+          <View style={styles.searchIconRight}>
+            <Search size={20} color="#9ca3af" />
+          </View>
+          <TextInput
+            style={styles.searchInput}
             placeholder="په دې کټګورۍ کې ولټوئ..."
+            placeholderTextColor="#9ca3af"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white dark:bg-zinc-900 border-2 border-zinc-50 dark:border-zinc-800 rounded-[24px] sm:rounded-[28px] py-4 sm:py-5 pr-12 sm:pr-14 pl-14 sm:pl-16 text-sm sm:text-base font-bold placeholder:text-zinc-400 placeholder:font-medium focus:outline-none focus:ring-8 focus:ring-[var(--accent-color)]/5 focus:border-[var(--accent-color)] transition-all shadow-xl shadow-zinc-200/20 dark:shadow-none"
+            onChangeText={setSearchQuery}
           />
-          <div className="absolute inset-y-0 left-2 flex items-center space-x-1 space-x-reverse">
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
+          <View style={styles.searchActionsLeft}>
+            {searchQuery.length > 0 && (
+              <TouchableOpacity 
+                onPress={() => setSearchQuery('')}
+                style={styles.clearButton}
               >
-                <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                  <span className="text-xs font-black">✕</span>
-                </div>
-              </button>
+                <View style={styles.clearIconBg}>
+                  <X size={12} color="#9ca3af" />
+                </View>
+              </TouchableOpacity>
             )}
-            <div className="relative">
-              <button
-                onClick={() => setShowFilterMenu(!showFilterMenu)}
-                className={`p-2 rounded-xl transition-colors ${showFilterMenu || searchType !== 'both' ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/10' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+            <View style={styles.filterContainer}>
+              <TouchableOpacity
+                onPress={() => setShowFilterMenu(!showFilterMenu)}
+                style={[
+                  styles.filterButton,
+                  (showFilterMenu || searchType !== 'both') && styles.filterButtonActive
+                ]}
               >
-                <Filter size={20} />
-              </button>
+                <Filter size={20} color={(showFilterMenu || searchType !== 'both') ? 'var(--accent-color)' : '#9ca3af'} />
+              </TouchableOpacity>
               
-              <AnimatePresence>
-                {showFilterMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute left-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden z-50"
+              {showFilterMenu && (
+                <View style={styles.filterMenu}>
+                  <Text style={styles.filterMenuTitle}>پلټنه په:</Text>
+                  {[
+                    { id: 'both', label: 'ټول (عنوان او متن)' },
+                    { id: 'title', label: 'یوازې عنوان کې' },
+                    { id: 'content', label: 'یوازې متن کې' }
+                  ].map(option => (
+                    <TouchableOpacity
+                      key={option.id}
+                      onPress={() => {
+                        setSearchType(option.id as any);
+                        setShowFilterMenu(false);
+                      }}
+                      style={[
+                        styles.filterOption,
+                        searchType === option.id && styles.filterOptionActive
+                      ]}
                     >
-                      <div className="p-2 space-y-1">
-                        <div className="px-3 py-2 text-[10px] font-black text-zinc-400 uppercase tracking-wider">پلټنه په:</div>
-                        {[
-                          { id: 'both', label: 'ټول (عنوان او متن)' },
-                          { id: 'title', label: 'یوازې عنوان کې' },
-                          { id: 'content', label: 'یوازې متن کې' }
-                        ].map(option => (
-                          <button
-                            key={option.id}
-                            onClick={() => {
-                              setSearchType(option.id as any);
-                              setShowFilterMenu(false);
-                            }}
-                            className={`w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                              searchType === option.id 
-                                ? 'bg-[var(--accent-color)]/10 text-[var(--accent-color)]' 
-                                : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
-      </div>
+                      <Text style={[
+                        styles.filterOptionText,
+                        searchType === option.id && styles.filterOptionTextActive
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </View>
 
       {/* Posts List */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-zinc-400 font-bold">{filteredPosts.length} مطالب موندل شوي</span>
-        </div>
+      <ScrollView style={styles.listContainer} contentContainerStyle={styles.listContent}>
+        <View style={styles.listHeader}>
+          <Text style={styles.listCountText}>{filteredPosts.length} مطالب موندل شوي</Text>
+        </View>
 
         {filteredPosts.length === 0 ? (
-          <div className="text-center py-12 text-zinc-500 font-bold">
-            هیڅ مطلب ونه موندل شو
-          </div>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>هیڅ مطلب ونه موندل شو</Text>
+          </View>
         ) : (
-          <motion.div 
-            className="space-y-3"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              visible: {
-                transition: {
-                  staggerChildren: 0.05
-                }
-              }
-            }}
-          >
+          <View style={styles.postsList}>
             {filteredPosts.map((post) => (
-              <motion.button
+              <TouchableOpacity
                 key={post.id}
-                variants={{
-                  hidden: { opacity: 0, y: 20, scale: 0.98 },
-                  visible: { opacity: 1, y: 0, scale: 1 }
-                }}
-                transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                whileHover={{ scale: 1.01, x: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleView(post)}
-                className="w-full flex items-center p-4 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-[var(--accent-color)]/30 transition-all group"
+                onPress={() => handleView(post)}
+                style={styles.postCard}
               >
-                <div className="relative">
-                  <div className="w-14 h-14 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:bg-[var(--accent-color)]/10 group-hover:text-[var(--accent-color)] transition-colors">
-                    <MessageSquare size={24} className="opacity-40 group-hover:opacity-100" />
-                  </div>
+                <View style={styles.postIconContainer}>
+                  <View style={styles.postIconBg}>
+                    <MessageSquare size={24} color="#9ca3af" />
+                  </View>
                   {(favorites || []).includes(post.id) && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center text-white">
-                      <Heart size={10} fill="currentColor" />
-                    </div>
+                    <View style={styles.favoriteBadge}>
+                      <Heart size={10} color="white" fill="white" />
+                    </View>
                   )}
-                </div>
+                </View>
                 
-                <div className="mr-4 flex-1 text-right">
-                  <h3 className="font-bold text-lg group-hover:text-[var(--accent-color)] transition-colors line-clamp-1">{post.title}</h3>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">{post.content}</p>
-                </div>
+                <View style={styles.postTextContainer}>
+                  <Text style={styles.postTitle} numberOfLines={1}>{post.title}</Text>
+                  <Text style={styles.postPreview} numberOfLines={1}>{post.content}</Text>
+                </View>
 
-                <div className="flex flex-col items-end space-y-1">
-                  <div className="flex items-center space-x-1 space-x-reverse text-zinc-400">
-                    <Eye size={12} />
-                    <span className="text-[10px] font-bold">{post.views || 0}</span>
-                  </div>
-                  <div className="text-zinc-300 dark:text-zinc-700">
-                    <ChevronLeft size={20} />
-                  </div>
-                  <span className="text-[10px] text-zinc-400 font-mono">
+                <View style={styles.postMetaContainer}>
+                  <View style={styles.viewsContainer}>
+                    <Eye size={12} color="#9ca3af" />
+                    <Text style={styles.viewsText}>{post.views || 0}</Text>
+                  </View>
+                  <ChevronLeft size={20} color="#d1d5db" />
+                  <Text style={styles.dateText}>
                     {new Date(post.timestamp).toLocaleDateString('fa-AF')}
-                  </span>
-                </div>
-              </motion.button>
+                  </Text>
+                </View>
+              </TouchableOpacity>
             ))}
-          </motion.div>
+          </View>
         )}
-      </div>
-    </div>
+      </ScrollView>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  header: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    padding: 12,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    marginLeft: 16,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    zIndex: 20,
+    marginBottom: 16,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderWidth: 2,
+    borderColor: '#f9fafb',
+    borderRadius: 28,
+    paddingVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  searchIconRight: {
+    paddingHorizontal: 16,
+  },
+  searchInput: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    paddingVertical: 12,
+  },
+  searchActionsLeft: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  clearButton: {
+    padding: 8,
+  },
+  clearIconBg: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterContainer: {
+    position: 'relative',
+  },
+  filterButton: {
+    padding: 8,
+    borderRadius: 12,
+  },
+  filterButtonActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)', // Fallback accent
+  },
+  filterMenu: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    marginTop: 8,
+    width: 192,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 5,
+    zIndex: 50,
+  },
+  filterMenuTitle: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    textAlign: 'right',
+  },
+  filterOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  filterOptionActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  filterOptionText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#4b5563',
+    textAlign: 'right',
+  },
+  filterOptionTextActive: {
+    color: 'var(--accent-color)', // Fallback needed
+  },
+  listContainer: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 48,
+  },
+  listHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    marginBottom: 16,
+  },
+  listCountText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+  },
+  emptyState: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6b7280',
+  },
+  postsList: {
+    gap: 12,
+  },
+  postCard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  postIconContainer: {
+    position: 'relative',
+  },
+  postIconBg: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#f9fafb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  favoriteBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ef4444',
+    borderWidth: 2,
+    borderColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  postTextContainer: {
+    flex: 1,
+    marginRight: 16,
+    alignItems: 'flex-end',
+  },
+  postTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 4,
+    textAlign: 'right',
+  },
+  postPreview: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'right',
+  },
+  postMetaContainer: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  viewsContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewsText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+  },
+  dateText: {
+    fontSize: 10,
+    color: '#9ca3af',
+    fontFamily: 'monospace',
+  },
+});
 
 export default CategoryPage;

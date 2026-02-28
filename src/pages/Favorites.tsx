@@ -1,132 +1,268 @@
 import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useContent, Post } from '../context/ContentContext';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { useNavigation } from '@react-navigation/native';
 import { Heart, HeartOff, ChevronLeft, MessageSquare, Trash2 } from 'lucide-react';
 
 const Favorites: React.FC = () => {
   const { posts, favorites, toggleFavorite, setCurrentPost, incrementViews } = useContent();
-  const navigate = useNavigate();
+  const navigation = useNavigation<any>();
 
   const favoritePosts = posts.filter(p => (favorites || []).includes(p.id));
 
   const handleView = (post: Post) => {
     incrementViews(post.id);
     setCurrentPost(post);
-    navigate('/player');
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.95 },
-    visible: { opacity: 1, y: 0, scale: 1 }
+    navigation.navigate('Player');
   };
 
   return (
-    <div className="space-y-8 pb-12">
-      <header className="relative overflow-hidden rounded-[32px] sm:rounded-[40px] bg-red-500 p-6 sm:p-8 text-white shadow-xl shadow-red-500/20">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-          <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <path d="M0 100 C 20 0 50 0 100 100 Z" fill="currentColor" />
-          </svg>
-        </div>
-        <div className="absolute -bottom-4 -left-4 opacity-20 rotate-12">
-          <Heart size={120} fill="currentColor" strokeWidth={0} />
-        </div>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.header}>
+        <View style={styles.headerBackground}>
+          <Heart size={120} color="rgba(255,255,255,0.2)" fill="rgba(255,255,255,0.2)" style={styles.headerBgIcon} />
+        </View>
         
-        <div className="relative z-10 space-y-3">
-          <div className="flex items-center space-x-2 space-x-reverse">
-            <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-md">
-              <Heart size={16} fill="currentColor" />
-            </div>
-            <span className="text-xs font-medium opacity-90">ستاسو خوښ شوي</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black leading-tight">خوښ شوي مطالب</h1>
-          <p className="text-white/80 text-xs sm:text-sm max-w-[240px]">
+        <View style={styles.headerContent}>
+          <View style={styles.headerBadge}>
+            <Heart size={16} color="white" fill="white" />
+            <Text style={styles.headerBadgeText}>ستاسو خوښ شوي</Text>
+          </View>
+          <Text style={styles.headerTitle}>خوښ شوي مطالب</Text>
+          <Text style={styles.headerSubtitle}>
             دلته ستاسو د خوښې وړ لیکنو او مطالبو ټولګه ده.
-          </p>
-        </div>
-      </header>
+          </Text>
+        </View>
+      </View>
 
       {favoritePosts.length === 0 ? (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="py-24 text-center space-y-6"
-        >
-          <div className="relative w-32 h-32 mx-auto">
-            <div className="absolute inset-0 bg-[var(--accent-color)]/5 rounded-full animate-pulse" />
-            <div className="relative w-full h-full rounded-full bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-300 shadow-inner">
-              <HeartOff size={48} strokeWidth={1.5} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold text-zinc-800 dark:text-zinc-200">لیست خالي دی</h3>
-            <p className="text-zinc-500 text-sm max-w-[240px] mx-auto">تاسو تر اوسه هیڅ مطلب نه دی خوښ کړی.</p>
-          </div>
-          <button 
-            onClick={() => navigate('/')}
-            className="px-8 py-3 bg-[var(--accent-color)] text-white rounded-2xl font-bold shadow-lg shadow-[var(--accent-color)]/20 active:scale-95 transition-transform"
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconWrapper}>
+            <View style={styles.emptyIconPulse} />
+            <View style={styles.emptyIconInner}>
+              <HeartOff size={48} color="#d1d5db" />
+            </View>
+          </View>
+          <View style={styles.emptyTextContainer}>
+            <Text style={styles.emptyTitle}>لیست خالي دی</Text>
+            <Text style={styles.emptySubtitle}>تاسو تر اوسه هیڅ مطلب نه دی خوښ کړی.</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.exploreButton}
+            onPress={() => navigation.navigate('Home')}
           >
-            مطالب وګورئ
-          </button>
-        </motion.div>
+            <Text style={styles.exploreButtonText}>مطالب وګورئ</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4"
-        >
-          <div className="flex items-center justify-between px-2">
-            <span className="text-xs font-black uppercase tracking-widest text-zinc-400">{favoritePosts.length} مطالب</span>
-          </div>
+        <View style={styles.listContainer}>
+          <View style={styles.listHeader}>
+            <Text style={styles.listCountText}>{favoritePosts.length} مطالب</Text>
+          </View>
 
           {favoritePosts.map((post) => (
-            <motion.div
+            <TouchableOpacity
               key={post.id}
-              variants={itemVariants}
-              className="group relative bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-100 dark:border-zinc-800 p-4 flex items-center shadow-sm hover:shadow-xl hover:border-[var(--accent-color)]/20 transition-all duration-300"
+              style={styles.postCard}
+              onPress={() => handleView(post)}
             >
-              <button
-                onClick={() => handleView(post)}
-                className="relative w-14 h-14 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:bg-[var(--accent-color)] group-hover:text-white transition-all duration-300 shadow-inner"
-              >
-                <MessageSquare size={24} className="opacity-40 group-hover:opacity-100" />
-              </button>
+              <View style={styles.postIconContainer}>
+                <MessageSquare size={24} color="#9ca3af" />
+              </View>
 
-              <div className="mr-4 flex-1 text-right">
-                <h3 className="font-black text-lg text-zinc-800 dark:text-zinc-100 group-hover:text-[var(--accent-color)] transition-colors line-clamp-1">{post.title}</h3>
-                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-1">{post.content}</p>
-              </div>
+              <View style={styles.postContent}>
+                <Text style={styles.postTitle} numberOfLines={1}>{post.title}</Text>
+                <Text style={styles.postExcerpt} numberOfLines={1}>{post.content}</Text>
+              </View>
 
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <button
-                  onClick={() => toggleFavorite(post.id)}
-                  className="p-3 text-red-500 bg-red-50 dark:bg-red-900/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 active:scale-90"
-                  title="لیرې کول"
+              <View style={styles.postActions}>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => toggleFavorite(post.id)}
                 >
-                  <Trash2 size={18} />
-                </button>
-                <div className="text-zinc-300 dark:text-zinc-700 group-hover:translate-x-[-4px] transition-transform">
-                  <ChevronLeft size={20} />
-                </div>
-              </div>
-            </motion.div>
+                  <Trash2 size={18} color="#ef4444" />
+                </TouchableOpacity>
+                <ChevronLeft size={20} color="#d1d5db" />
+              </View>
+            </TouchableOpacity>
           ))}
-        </motion.div>
+        </View>
       )}
-    </div>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 48,
+  },
+  header: {
+    backgroundColor: '#ef4444',
+    borderRadius: 32,
+    padding: 24,
+    overflow: 'hidden',
+    marginBottom: 24,
+  },
+  headerBackground: {
+    position: 'absolute',
+    bottom: -20,
+    left: -20,
+    transform: [{ rotate: '12deg' }],
+  },
+  headerBgIcon: {
+    opacity: 0.5,
+  },
+  headerContent: {
+    zIndex: 10,
+  },
+  headerBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-end',
+    marginBottom: 12,
+  },
+  headerBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'right',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    textAlign: 'right',
+  },
+  emptyContainer: {
+    paddingVertical: 64,
+    alignItems: 'center',
+  },
+  emptyIconWrapper: {
+    width: 128,
+    height: 128,
+    marginBottom: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyIconPulse: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+    borderRadius: 64,
+  },
+  emptyIconInner: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'white',
+    borderRadius: 64,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyTextContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  exploreButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 16,
+  },
+  exploreButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  listContainer: {
+    gap: 16,
+  },
+  listHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    marginBottom: 8,
+  },
+  listCountText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+  },
+  postCard: {
+    flexDirection: 'row-reverse',
+    backgroundColor: 'white',
+    borderRadius: 32,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    alignItems: 'center',
+  },
+  postIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#f9fafb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 16,
+  },
+  postContent: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  postTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 4,
+    textAlign: 'right',
+  },
+  postExcerpt: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'right',
+  },
+  postActions: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  deleteButton: {
+    padding: 12,
+    backgroundColor: '#fef2f2',
+    borderRadius: 16,
+    marginLeft: 8,
+  },
+});
 
 export default Favorites;

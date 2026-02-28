@@ -3,119 +3,67 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
-import { App as CapApp } from '@capacitor/app';
-import { StatusBar, Style } from '@capacitor/status-bar';
+import React, { useState, useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { ContentProvider } from './context/ContentContext';
-import ConfirmDialog from './components/ConfirmDialog';
-import Layout from './components/Layout';
+import { View, Text, useColorScheme } from 'react-native';
+
+// Actual components
 import Home from './pages/Home';
 import Player from './pages/Player';
 import Favorites from './pages/Favorites';
 import Settings from './pages/Settings';
 import About from './pages/About';
+
+// Placeholder components for screens
 import Admin from './pages/Admin';
 import AdminPosts from './pages/AdminPosts';
 import AdminCategories from './pages/AdminCategories';
 import AdminTopPosts from './pages/AdminTopPosts';
 import CategoryPage from './pages/CategoryPage';
-import SplashAndRegister from './components/SplashAndRegister';
 import ProfileEdit from './pages/ProfileEdit';
 import Comments from './pages/Comments';
+import SplashAndRegister from './components/SplashAndRegister';
 
-function CapacitorHandler({ onExitRequest }: { onExitRequest: () => void }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { mode } = useTheme();
+const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    let backListener: any = null;
-
-    const initCapacitor = async () => {
-      try {
-        // Handle Android Back Button
-        if (CapApp && typeof CapApp.addListener === 'function') {
-          backListener = await CapApp.addListener('backButton', ({ canGoBack }) => {
-            if (location.pathname === '/') {
-              onExitRequest();
-            } else {
-              navigate(-1);
-            }
-          });
-        }
-
-        // Configure Status Bar
-        if (StatusBar && typeof StatusBar.setOverlaysWebView === 'function') {
-          await StatusBar.setOverlaysWebView({ overlay: true });
-          if (mode === 'dark') {
-            await StatusBar.setStyle({ style: Style.Dark });
-          } else {
-            await StatusBar.setStyle({ style: Style.Light });
-          }
-        }
-      } catch (e) {
-        console.warn('Capacitor plugins failed', e);
-      }
-    };
-
-    initCapacitor();
-
-    return () => {
-      if (backListener) {
-        backListener.remove();
-      }
-    };
-  }, [navigate, location, mode]);
-
-  return null;
+function MainTabs() {
+  return (
+    <Tab.Navigator id="MainTabs" screenOptions={{ headerShown: false }}>
+      <Tab.Screen name="Home" component={Home} />
+      <Tab.Screen name="Favorites" component={Favorites} />
+      <Tab.Screen name="Settings" component={Settings} />
+    </Tab.Navigator>
+  );
 }
 
 function AppContent() {
   const [isReady, setIsReady] = useState(false);
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const colorScheme = useColorScheme();
 
   if (!isReady) {
     return <SplashAndRegister onComplete={() => setIsReady(true)} />;
   }
 
-  const handleExitConfirm = () => {
-    if (Capacitor.isNativePlatform()) {
-      CapApp.exitApp();
-    }
-  };
-
   return (
-    <BrowserRouter>
-      <CapacitorHandler onExitRequest={() => setShowExitConfirm(true)} />
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="player" element={<Player />} />
-          <Route path="favorites" element={<Favorites />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="about" element={<About />} />
-          <Route path="admin" element={<Admin />} />
-          <Route path="admin/posts" element={<AdminPosts />} />
-          <Route path="admin/categories" element={<AdminCategories />} />
-          <Route path="admin/top-posts" element={<AdminTopPosts />} />
-          <Route path="category/:id" element={<CategoryPage />} />
-          <Route path="profile-edit" element={<ProfileEdit />} />
-          <Route path="comments/:id" element={<Comments />} />
-        </Route>
-      </Routes>
-      <ConfirmDialog
-        isOpen={showExitConfirm}
-        title="وتل"
-        message="ایا غواړئ چې له اپلیکیشن څخه ووځئ؟"
-        onConfirm={handleExitConfirm}
-        onCancel={() => setShowExitConfirm(false)}
-      />
-    </BrowserRouter>
+    <NavigationContainer>
+      <Stack.Navigator id="RootStack" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Main" component={MainTabs} />
+        <Stack.Screen name="Player" component={Player} />
+        <Stack.Screen name="About" component={About} />
+        <Stack.Screen name="Admin" component={Admin} />
+        <Stack.Screen name="AdminPosts" component={AdminPosts} />
+        <Stack.Screen name="AdminCategories" component={AdminCategories} />
+        <Stack.Screen name="AdminTopPosts" component={AdminTopPosts} />
+        <Stack.Screen name="Category" component={CategoryPage} />
+        <Stack.Screen name="ProfileEdit" component={ProfileEdit} />
+        <Stack.Screen name="Comments" component={Comments} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 

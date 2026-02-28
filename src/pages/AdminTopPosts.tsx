@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -8,16 +9,14 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Search,
-  ChevronLeft,
   Calendar,
   FileText
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
-import { motion, AnimatePresence } from 'motion/react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const AdminTopPosts: React.FC = () => {
-  const navigate = useNavigate();
+  const navigation = useNavigation<any>();
   const { topPosts, addTopPost, deleteTopPost, posts, isAdmin } = useContent();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,6 +38,7 @@ const AdminTopPosts: React.FC = () => {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError('تېروتنه رامنځته شوه');
+      setTimeout(() => setError(''), 3000);
     }
   };
 
@@ -50,97 +50,106 @@ const AdminTopPosts: React.FC = () => {
         setTimeout(() => setSuccess(''), 3000);
       } catch (err) {
         setError('تېروتنه رامنځته شوه');
+        setTimeout(() => setError(''), 3000);
       }
       setPostToDelete(null);
     }
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <header className="flex items-center space-x-4 space-x-reverse">
-        <button onClick={() => navigate('/admin')} className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl active:scale-90 transition-all">
-          <ArrowRight size={20} />
-        </button>
-        <h1 className="text-2xl font-black">بهترینې خبرې مدیریت</h1>
-      </header>
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <ArrowRight size={20} color="#1f2937" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>بهترینې خبرې مدیریت</Text>
+        </View>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-sm font-black text-zinc-400 uppercase tracking-widest">غوره لیست ({topPosts.length}/10)</h2>
-          <p className="text-[10px] text-zinc-400 font-medium">یوازې ۱۰ وروستي ساتل کیږي</p>
-        </div>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>غوره لیست ({topPosts.length}/10)</Text>
+            <Text style={styles.sectionSubtitle}>یوازې ۱۰ وروستي ساتل کیږي</Text>
+          </View>
 
-        <div className="space-y-3">
-          {topPosts.map((post) => (
-            <motion.div
-              layout
-              key={post.id}
-              className="bg-white dark:bg-zinc-900 p-4 rounded-[24px] border border-amber-100 dark:border-amber-900/20 shadow-sm flex items-center justify-between group"
-            >
-              <div className="flex-1 min-w-0 ml-4">
-                <h3 className="font-bold text-zinc-800 dark:text-zinc-100 truncate">{post.title}</h3>
-                <div className="flex items-center space-x-3 space-x-reverse mt-1">
-                  <span className="text-[10px] font-black text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">غوره مطلب</span>
-                  <div className="flex items-center text-[10px] text-zinc-400 font-medium">
-                    <Calendar size={10} className="ml-1" />
-                    {new Date(post.timestamp).toLocaleDateString('fa-AF')}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setPostToDelete(post.id)}
-                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+          <View style={styles.listContainer}>
+            {topPosts.map((post) => (
+              <View key={post.id} style={styles.topPostCard}>
+                <View style={styles.postInfo}>
+                  <Text style={styles.postTitle} numberOfLines={1}>{post.title}</Text>
+                  <View style={styles.postMeta}>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>غوره مطلب</Text>
+                    </View>
+                    <View style={styles.dateContainer}>
+                      <Calendar size={10} color="#9ca3af" />
+                      <Text style={styles.dateText}>
+                        {new Date(post.timestamp).toLocaleDateString('fa-AF')}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setPostToDelete(post.id)}
+                  style={styles.deleteButton}
+                >
+                  <Trash2 size={18} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {topPosts.length === 0 && (
+              <View style={styles.emptyState}>
+                <Sparkles size={32} color="#d1d5db" style={{ marginBottom: 8 }} />
+                <Text style={styles.emptyStateText}>تر اوسه کوم غوره مطلب نشته</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={[styles.section, { marginTop: 24 }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>د مطالبو انتخاب</Text>
+          </View>
+
+          <View style={styles.searchContainer}>
+            <Search size={18} color="#9ca3af" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="د مطلب پلټنه..."
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+
+          <View style={styles.selectionList}>
+            {filteredPosts.map((post) => (
+              <TouchableOpacity
+                key={post.id}
+                onPress={() => handleAdd(post)}
+                style={styles.selectionItem}
               >
-                <Trash2 size={18} />
-              </button>
-            </motion.div>
-          ))}
-          {topPosts.length === 0 && (
-            <div className="text-center py-10 bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] border border-dashed border-zinc-200 dark:border-zinc-800">
-              <Sparkles size={32} className="mx-auto text-zinc-300 mb-2" />
-              <p className="text-zinc-400 text-xs font-medium">تر اوسه کوم غوره مطلب نشته</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-4 pt-4">
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-sm font-black text-zinc-400 uppercase tracking-widest">د مطالبو انتخاب</h2>
-        </div>
-
-        <div className="relative">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="د مطلب پلټنه..."
-            className="w-full bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl py-4 pr-12 pl-6 focus:outline-none focus:ring-4 focus:ring-[var(--accent-color)]/10 font-bold shadow-sm"
-          />
-        </div>
-
-        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-          {filteredPosts.map((post) => (
-            <button
-              key={post.id}
-              onClick={() => handleAdd(post)}
-              className="w-full bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 flex items-center justify-between hover:border-[var(--accent-color)] transition-all group"
-            >
-              <div className="flex-1 min-w-0 text-right ml-4">
-                <h4 className="font-bold text-sm text-zinc-700 dark:text-zinc-200 truncate">{post.title}</h4>
-                <p className="text-[10px] text-zinc-400 mt-0.5">{post.category}</p>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-300 group-hover:bg-[var(--accent-color)] group-hover:text-white transition-colors">
-                <PlusCircle size={16} />
-              </div>
-            </button>
-          ))}
-          {filteredPosts.length === 0 && searchQuery && (
-            <p className="text-center py-6 text-zinc-400 text-xs">هیڅ مطلب ونه موندل شو</p>
-          )}
-        </div>
-      </div>
+                <View style={styles.selectionInfo}>
+                  <Text style={styles.selectionTitle} numberOfLines={1}>{post.title}</Text>
+                  <Text style={styles.selectionCategory}>{post.category}</Text>
+                </View>
+                <View style={styles.addButton}>
+                  <PlusCircle size={16} color="#9ca3af" />
+                </View>
+              </TouchableOpacity>
+            ))}
+            {filteredPosts.length === 0 && searchQuery ? (
+              <Text style={styles.noResults}>هیڅ مطلب ونه موندل شو</Text>
+            ) : null}
+          </View>
+        </View>
+      </ScrollView>
 
       <ConfirmDialog
         isOpen={!!postToDelete}
@@ -150,21 +159,235 @@ const AdminTopPosts: React.FC = () => {
         onCancel={() => setPostToDelete(null)}
       />
 
-      <AnimatePresence>
-        {(error || success) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className={`fixed bottom-6 left-6 right-6 p-4 rounded-2xl shadow-2xl flex items-center space-x-3 space-x-reverse z-50 ${error ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}`}
-          >
-            {error ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
-            <span className="font-bold text-sm">{error || success}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      {(error || success) ? (
+        <View style={[styles.toast, error ? styles.toastError : styles.toastSuccess]}>
+          {error ? <AlertCircle size={20} color="white" /> : <CheckCircle2 size={20} color="white" />}
+          <Text style={styles.toastText}>{error || success}</Text>
+        </View>
+      ) : null}
+    </KeyboardAvoidingView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 48,
+  },
+  header: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 24,
+    marginTop: 16,
+    gap: 16,
+  },
+  backButton: {
+    padding: 8,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 8,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+  },
+  sectionSubtitle: {
+    fontSize: 10,
+    color: '#9ca3af',
+  },
+  listContainer: {
+    gap: 12,
+  },
+  topPostCard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#fef3c7', // amber-100
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  postInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  postTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'right',
+    marginBottom: 4,
+  },
+  postMeta: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+  },
+  badge: {
+    backgroundColor: '#fffbeb', // amber-50
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#f59e0b', // amber-500
+  },
+  dateContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dateText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    backgroundColor: '#f9fafb',
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+  },
+  emptyStateText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+  },
+  searchContainer: {
+    position: 'relative',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  searchIcon: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 1,
+  },
+  searchInput: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingRight: 48,
+    paddingLeft: 24,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'right',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  selectionList: {
+    gap: 8,
+  },
+  selectionItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  selectionInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  selectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#374151',
+    textAlign: 'right',
+  },
+  selectionCategory: {
+    fontSize: 10,
+    color: '#9ca3af',
+    textAlign: 'right',
+    marginTop: 2,
+  },
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f9fafb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noResults: {
+    textAlign: 'center',
+    paddingVertical: 24,
+    color: '#9ca3af',
+    fontSize: 12,
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    right: 24,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  toastError: {
+    backgroundColor: '#ef4444',
+  },
+  toastSuccess: {
+    backgroundColor: '#10b981',
+  },
+  toastText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+});
 
 export default AdminTopPosts;

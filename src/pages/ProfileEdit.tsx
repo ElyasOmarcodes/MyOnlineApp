@@ -1,94 +1,193 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useContent } from '../context/ContentContext';
-import { motion } from 'motion/react';
 import { User, Phone, Check, ChevronRight } from 'lucide-react';
 
 const ProfileEdit: React.FC = () => {
   const { currentUser, updateUser } = useContent();
-  const navigate = useNavigate();
+  const navigation = useNavigation<any>();
   const [name, setName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (name.trim() && phone.trim()) {
       updateUser(name.trim(), phone.trim());
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
-        navigate(-1);
+        navigation.goBack();
       }, 1500);
     }
   };
 
   return (
-    <div className="space-y-8 pb-24" dir="rtl">
-      <div className="flex items-center space-x-4 space-x-reverse py-4">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 text-zinc-500"
-        >
-          <ChevronRight size={24} />
-        </button>
-        <h1 className="text-2xl font-black">پروفایل ایډیټ</h1>
-      </div>
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <ChevronRight size={24} color="#717a8b" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>پروفایل ایډیټ</Text>
+        </View>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-zinc-900 rounded-[40px] p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm"
-      >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mr-4">ستاسو نوم</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
-                <User size={18} />
-              </div>
-              <input
-                type="text"
+        <View style={styles.formContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>ستاسو نوم</Text>
+            <View style={styles.inputWrapper}>
+              <View style={styles.inputIconRight}>
+                <User size={18} color="#9ca3af" />
+              </View>
+              <TextInput
+                style={styles.textInput}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-2xl py-4 pr-12 pl-4 focus:outline-none focus:ring-4 focus:ring-[var(--accent-color)]/10 focus:border-[var(--accent-color)] transition-all font-bold"
+                onChangeText={setName}
+                placeholder="نوم"
+                placeholderTextColor="#9ca3af"
               />
-            </div>
-          </div>
+            </View>
+          </View>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mr-4">د موبایل شمېره</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
-                <Phone size={18} />
-              </div>
-              <input
-                type="tel"
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>د موبایل شمېره</Text>
+            <View style={styles.inputWrapper}>
+              <View style={styles.inputIconRight}>
+                <Phone size={18} color="#9ca3af" />
+              </View>
+              <TextInput
+                style={[styles.textInput, { textAlign: 'left' }]}
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-2xl py-4 pr-12 pl-4 focus:outline-none focus:ring-4 focus:ring-[var(--accent-color)]/10 focus:border-[var(--accent-color)] transition-all font-bold text-left"
-                dir="ltr"
+                onChangeText={setPhone}
+                placeholder="شمېره"
+                placeholderTextColor="#9ca3af"
+                keyboardType="phone-pad"
               />
-            </div>
-          </div>
+            </View>
+          </View>
 
-          <button
-            type="submit"
-            className="w-full bg-[var(--accent-color)] text-white font-black py-5 rounded-2xl shadow-xl shadow-[var(--accent-color)]/20 active:scale-[0.98] transition-all flex items-center justify-center space-x-2 space-x-reverse"
+          <TouchableOpacity
+            onPress={handleSubmit}
+            style={styles.submitButton}
+            activeOpacity={0.8}
           >
             {success ? (
-              <>
-                <Check size={20} />
-                <span>خوندي شو!</span>
-              </>
+              <View style={styles.buttonContent}>
+                <Check size={20} color="white" />
+                <Text style={styles.buttonText}>خوندي شو!</Text>
+              </View>
             ) : (
-              <span>تغیرات خوندي کړئ</span>
+              <Text style={styles.buttonText}>تغیرات خوندي کړئ</Text>
             )}
-          </button>
-        </form>
-      </motion.div>
-    </div>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 48,
+  },
+  header: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 32,
+    marginTop: 16,
+  },
+  backButton: {
+    padding: 12,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    marginLeft: 16,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    borderRadius: 40,
+    padding: 32,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 8,
+    marginRight: 16,
+    textAlign: 'right',
+  },
+  inputWrapper: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    borderRadius: 16,
+  },
+  inputIconRight: {
+    paddingHorizontal: 16,
+  },
+  textInput: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'right',
+  },
+  submitButton: {
+    backgroundColor: 'var(--accent-color)', // Fallback needed
+    borderRadius: 16,
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: 'var(--accent-color)',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  buttonContent: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
 
 export default ProfileEdit;
