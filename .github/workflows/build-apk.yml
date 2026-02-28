@@ -1,4 +1,4 @@
-name: Build Android APK (Tayyeb Al-Kalam)
+name: Build Android APK
 on:
   push:
     branches: [ main ]
@@ -11,65 +11,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ۱. د Node.js اضافه کول
+      # ۱. د Node.js اضافه کول (د npm install لپاره اړین دی)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # ۲. د جاوا ۲۱ تنظیمول (ستاسو د خوښې مطابق)
-      - name: Set up JDK 21
+      # ۲. جاوا ۲۱ ستاسو د خوښې مطابق
+      - name: set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'zulu'
 
-      # ۳. د کتابتونونو انسټالول (دلته مې --legacy-peer-deps اضافه کړ)
-      # دا هغه ځای دی چې ستاسو مخکینی ارور یې حل کړ
       - name: Install dependencies
         run: |
-          npm install --legacy-peer-deps
-          # د Capacitor اړین کتابتونونه
-          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem --legacy-peer-deps
+          npm install
+          # د Capacitor اړین کتابتونونه انسټالول
+          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem
 
-      # ۴. د ویب پاڼې بلډ کول
       - name: Build Web App
         run: npm run build
 
-      # ۵. د Capacitor تنظیم او د نوم/پکیج تغیر
-      - name: Setup Capacitor & Android
+      - name: Sync with Capacitor
         run: |
-          # که پخوانی فایل وي لیرې یې کړه ترڅو نوی نوم واخلي
-          rm -f capacitor.config.json capacitor.config.ts
-          
-          # نوی نوم "طیب الکلام" او نوی پکیج "com.elyas.ktayyeb"
+          # د اپلیکیشن نوی نوم او Package ID
           npx cap init "طیب الکلام" "com.elyas.ktayyeb" --web-dir dist
           npx cap add android
           npx cap sync android
 
-      # ۶. د آیکن برخه (که logo.png شتون ولري)
+      # ۳. د آیکن برخه
       - name: Generate Icon
         run: |
           if [ -f "logo.png" ]; then
-            npm install @capacitor/assets --legacy-peer-deps
+            mkdir -p assets
+            cp logo.png assets/icon.png
             npx capacitor-assets generate --android
           else
             echo "Warning: logo.png not found, skipping icon generation."
           fi
 
-      # ۷. د اجازې (Permissions) او انټرنیټ تنظیمات
-      - name: Inject Permissions
+      # ۴. د اجازې (Permissions) برخه
+      - name: Inject Permissions and Fix Name
         run: |
-          # فولډر ته ورننوځه
           cd android/app/src/main
           
-          # انټرنیټ او سټوریج اجازې ورکول
-          sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
+          # د سټوریج اجازې زیاتول (د انټرنیټ اجازه Capacitor پخپله ورکوي)
+          sed -i 's/<application/<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
           
-          # د ClearText ټرافیک فعالول (د فایربیس او انټرنیټ لپاره مهم)
+          # د ډاونلوډ لپاره "ClearText" او "Legacy Storage" فعاله کول
           sed -i 's/<application/<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"/g' AndroidManifest.xml
 
-      # ۸. د Kotlin ستونزې حل (ستاسو پخوانی کوډ)
+      # ۵. د Kotlin د تکراري فایلونو ستونزه (Fix)
       - name: Fix Kotlin Dependency Conflict
         run: |
           cd android
@@ -77,21 +70,21 @@ jobs:
           echo "allprojects {" >> build.gradle
           echo "    configurations.all {" >> build.gradle
           echo "        resolutionStrategy {" >> build.gradle
-          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'" >> build.gradle
-          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22'" >> build.gradle
-          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'" >> build.gradle
+          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'" >> build.gradle
+          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'" >> build.gradle
+          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'" >> build.gradle
           echo "        }" >> build.gradle
           echo "    }" >> build.gradle
           echo "}" >> build.gradle
 
-      # ۹. د APK جوړول
+      # ۶. د APK جوړول
       - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # ۱۰. د APK اپلوډ کول
+      # ۷. د APK اپلوډ ترڅو تاسو یې ډاونلوډ کړئ
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
