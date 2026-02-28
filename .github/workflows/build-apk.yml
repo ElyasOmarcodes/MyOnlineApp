@@ -24,12 +24,12 @@ jobs:
           java-version: '21'
           distribution: 'zulu'
 
-      # ۳. د کتابتونونو انسټالول (دلته مې ورک شوي کتابتونونه اضافه کړل)
+      # ۳. د کتابتونونو انسټالول (دلته مې نوی ورک شوی کتابتون اضافه کړ)
       - name: Install dependencies
         run: |
           npm install --legacy-peer-deps
-          # د نیویګیشن ټولې برخې (Native, Stack, او اوس Bottom Tabs)
-          npm install @react-navigation/native @react-navigation/native-stack @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context --legacy-peer-deps
+          # د نیویګیشن او اوس د Async Storage کتابتونونه
+          npm install @react-native-async-storage/async-storage @react-navigation/native @react-navigation/native-stack @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context --legacy-peer-deps
           # د Capacitor اړین کتابتونونه
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem --legacy-peer-deps
 
