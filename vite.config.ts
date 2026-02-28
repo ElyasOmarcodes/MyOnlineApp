@@ -10,16 +10,27 @@ export default defineConfig(({mode}) => {
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      // دا لاندې کرښه هم مهمه ده ترڅو ځینې کتابتونونه کریش نشي
+      'process.env.NODE_ENV': JSON.stringify(mode),
+      global: 'window', // د React Native ځینې کتابتونونه د global کلمې ته اړتیا لري
     },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
         'react-native': 'react-native-web',
       },
+      // دا برخه ډېره مهمه ده: Vite ته وایي چې لومړی د ویب فایلونه وګوره
+      extensions: ['.web.js', '.web.jsx', '.web.ts', '.web.tsx', '.js', '.jsx', '.ts', '.tsx', '.json'],
+    },
+    // دا برخه د دې لپاره ده چې د 'loader' ستونزې حل کړي
+    optimizeDeps: {
+      esbuildOptions: {
+        loader: {
+          '.js': 'jsx', // ځینې RN کتابتونونه په .js فایل کې JSX کاروي
+        },
+      },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
     },
   };
