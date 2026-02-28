@@ -1,9 +1,8 @@
-
-
 name: Build Android APK
 on:
   push:
     branches: [ main ]
+  workflow_dispatch: # د دې په مرسته کولای شئ له GitHub څخه په لاسي ډول هم بلډ پیل کړئ
 
 jobs:
   build:
@@ -11,19 +10,20 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
 
-      # ۱. د Node.js اضافه کول (د npm install لپاره اړین دی)
+      # ۱. د Node.js اضافه کول
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # ۲. جاوا ۲۱ ستاسو د خوښې مطابق
-      - name: set up JDK 21
+      # ۲. د جاوا ۱۷ اضافه کول (د Capacitor او Android لپاره تر ټولو غوره نسخه)
+      - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'zulu'
 
       - name: Install dependencies
@@ -37,8 +37,10 @@ jobs:
 
       - name: Sync with Capacitor
         run: |
-          # د اپلیکیشن نوی نوم او Package ID
-          npx cap init "طیب الکلام" "com.elyas.ktayyeb" --web-dir dist
+          # که فایل مخکې نه وي جوړ شوی، نو نوی یې جوړ کړه ترڅو پروسه ونه دریږي
+          if [ ! -f "capacitor.config.json" ] && [ ! -f "capacitor.config.ts" ]; then
+            npx cap init "طیب الکلام" "com.elyas.ktayyeb" --web-dir dist
+          fi
           npx cap add android
           npx cap sync android
 
@@ -58,35 +60,20 @@ jobs:
         run: |
           cd android/app/src/main
           
-          # د سټوریج اجازې زیاتول (د انټرنیټ اجازه Capacitor پخپله ورکوي)
+          # د سټوریج اجازې زیاتول
           sed -i 's/<application/<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
           
           # د ډاونلوډ لپاره "ClearText" او "Legacy Storage" فعاله کول
           sed -i 's/<application/<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"/g' AndroidManifest.xml
 
-      # ۵. د Kotlin د تکراري فایلونو ستونزه (Fix)
-      - name: Fix Kotlin Dependency Conflict
-        run: |
-          cd android
-          echo "" >> build.gradle
-          echo "allprojects {" >> build.gradle
-          echo "    configurations.all {" >> build.gradle
-          echo "        resolutionStrategy {" >> build.gradle
-          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'" >> build.gradle
-          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'" >> build.gradle
-          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'" >> build.gradle
-          echo "        }" >> build.gradle
-          echo "    }" >> build.gradle
-          echo "}" >> build.gradle
-
-      # ۶. د APK جوړول
+      # ۵. د APK جوړول
       - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # ۷. د APK اپلوډ ترڅو تاسو یې ډاونلوډ کړئ
+      # ۶. د APK اپلوډ ترڅو تاسو یې ډاونلوډ کړئ
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
