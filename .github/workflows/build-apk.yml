@@ -1,0 +1,98 @@
+name: Build Android APK (Tayyeb Al-Kalam)
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # ۱. د Node.js اضافه کول
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ۲. د جاوا ۲۱ تنظیمول
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'zulu'
+
+      # ۳. د کتابتونونو انسټالول (دلته --legacy-peer-deps مهم دی)
+      # دا به د Tailwind او NativeWind ترمنځ شخړه حل کړي
+      - name: Install dependencies
+        run: |
+          npm install --legacy-peer-deps
+          # د Capacitor اړین کتابتونونه
+          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem --legacy-peer-deps
+
+      # ۴. د ویب پاڼې بلډ کول (اوس به دا کار کوي ځکه انجنیر کوډ سم کړی)
+      - name: Build Web App
+        run: npm run build
+
+      # ۵. د Capacitor تنظیم او د نوم/پکیج تغیر
+      - name: Setup Capacitor & Android
+        run: |
+          # زاړه فایلونه پاکول ترڅو د نوم په بدلون کې ستونزه جوړه نکړي
+          rm -f capacitor.config.json capacitor.config.ts
+          
+          # نوی نوم "طیب الکلام" او نوی پکیج "com.elyas.ktayyeb"
+          npx cap init "طیب الکلام" "com.elyas.ktayyeb" --web-dir dist
+          npx cap add android
+          npx cap sync android
+
+      # ۶. د آیکن برخه (که logo.png شتون ولري)
+      - name: Generate Icon
+        run: |
+          if [ -f "logo.png" ]; then
+            npm install @capacitor/assets --legacy-peer-deps
+            npx capacitor-assets generate --android
+          else
+            echo "Warning: logo.png not found, skipping icon generation."
+          fi
+
+      # ۷. د اجازې (Permissions) او انټرنیټ تنظیمات
+      - name: Inject Permissions
+        run: |
+          cd android/app/src/main
+          
+          # انټرنیټ او سټوریج اجازې ورکول
+          sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
+          
+          # د ClearText ټرافیک فعالول (د فایربیس لپاره مهم)
+          sed -i 's/<application/<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"/g' AndroidManifest.xml
+
+      # ۸. د Kotlin ستونزې حل (دا د بلډ د کامیابۍ لپاره اړین دی)
+      - name: Fix Kotlin Dependency Conflict
+        run: |
+          cd android
+          echo "" >> build.gradle
+          echo "allprojects {" >> build.gradle
+          echo "    configurations.all {" >> build.gradle
+          echo "        resolutionStrategy {" >> build.gradle
+          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'" >> build.gradle
+          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22'" >> build.gradle
+          echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'" >> build.gradle
+          echo "        }" >> build.gradle
+          echo "    }" >> build.gradle
+          echo "}" >> build.gradle
+
+      # ۹. د APK جوړول
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # ۱۰. د APK اپلوډ کول
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tayyab-Al-Kalam-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
