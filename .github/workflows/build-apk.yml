@@ -1,0 +1,47 @@
+name: Build React Native (Expo) APK
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # ۱. د Node.js اضافه کول
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ۲. د جاوا تنظیمول (یادونه: React Native او Gradle اوس مهال د جاوا ۱۷ سره تر ټولو ښه کار کوي)
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+
+      # ۳. د اړینو کتابتونونو انسټالول
+      - name: Install dependencies
+        run: npm install
+
+      # ۴. د انډرایډ فولډر جوړول (دا مرحله د Capacitor د 'npx cap sync' کار کوي)
+      - name: Generate Android Folder (Prebuild)
+        run: npx expo prebuild --platform android --clean
+
+      # ۵. د APK جوړول (کټ مټ لکه ستاسو د تیر فایل په څیر)
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # ۶. د APK اپلوډ ترڅو تاسو یې ډاونلوډ کړئ
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: React-Native-App-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
