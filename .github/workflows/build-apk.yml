@@ -1,0 +1,90 @@
+name: Build Android APK
+on:
+push:
+branches: [ main ]
+jobs:
+build:
+runs-on: ubuntu-latest
+permissions:
+contents: write
+steps:
+- uses: actions/checkout@v4
+# ۱. د Node.js اضافه کول (د npm install لپاره اړین دی)
+  - name: Setup Node.js
+    uses: actions/setup-node@v4
+    with:
+      node-version: '20'
+
+  # ۲. جاوا ۲۱ ستاسو د خوښې مطابق
+  - name: set up JDK 21
+    uses: actions/setup-java@v4
+    with:
+      java-version: '21'
+      distribution: 'zulu'
+
+  - name: Install dependencies
+    run: |
+      npm install
+      # د Capacitor اړین کتابتونونه انسټالول
+      npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem
+
+  - name: Build Web App
+    run: npm run build
+
+  - name: Sync with Capacitor
+    run: |
+      # د اپلیکیشن نوی نوم او Package ID
+      npx cap init "طیب الکلام" "com.elyas.ktayyeb" --web-dir dist
+      npx cap add android
+      npx cap sync android
+
+  # ۳. د آیکن برخه
+  - name: Generate Icon
+    run: |
+      if [ -f "logo.png" ]; then
+        mkdir -p assets
+        cp logo.png assets/icon.png
+        npx capacitor-assets generate --android
+      else
+        echo "Warning: logo.png not found, skipping icon generation."
+      fi
+
+  # ۴. د اجازې (Permissions) برخه
+  - name: Inject Permissions and Fix Name
+    run: |
+      cd android/app/src/main
+      
+      # د سټوریج اجازې زیاتول (د انټرنیټ اجازه Capacitor پخپله ورکوي)
+      sed -i 's/<application/<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
+      
+      # د ډاونلوډ لپاره "ClearText" او "Legacy Storage" فعاله کول
+      sed -i 's/<application/<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"/g' AndroidManifest.xml
+
+  # ۵. د Kotlin د تکراري فایلونو ستونزه (Fix)
+  - name: Fix Kotlin Dependency Conflict
+    run: |
+      cd android
+      echo "" >> build.gradle
+      echo "allprojects {" >> build.gradle
+      echo "    configurations.all {" >> build.gradle
+      echo "        resolutionStrategy {" >> build.gradle
+      echo "            force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'" >> build.gradle
+      echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'" >> build.gradle
+      echo "            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'" >> build.gradle
+      echo "        }" >> build.gradle
+      echo "    }" >> build.gradle
+      echo "}" >> build.gradle
+
+  # ۶. د APK جوړول
+  - name: Build Android APK
+    run: |
+      cd android
+      chmod +x gradlew
+      ./gradlew assembleDebug
+
+  # ۷. د APK اپلوډ ترڅو تاسو یې ډاونلوډ کړئ
+  - name: Upload APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: Tayyab-Al-Kalam-APK
+      path: android/app/build/outputs/apk/debug/app-debug.apk
