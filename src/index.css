@@ -16,6 +16,20 @@
     -webkit-tap-highlight-color: transparent;
   }
   
+  /* د ټولو شیانو د سلیکشن مخنیوی */
+  * {
+    -webkit-user-select: none; /* Safari لپاره */
+    -ms-user-select: none; /* IE 10+ او Edge لپاره */
+    user-select: none; /* معیاري ترکیب */
+  }
+
+  /* په انپوټ (Input) او ټیکسټ ایریا (Textarea) کې د لیکلو او ایډیټ لپاره سلیکشن ته اجازه */
+  input, textarea {
+    -webkit-user-select: auto;
+    -ms-user-select: auto;
+    user-select: auto;
+  }
+  
   body {
     @apply bg-zinc-50 dark:bg-black transition-colors duration-300;
   }
