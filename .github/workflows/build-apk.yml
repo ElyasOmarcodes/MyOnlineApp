@@ -29,16 +29,14 @@ jobs:
       - name: Install dependencies
         run: |
           npm install
-          # د Capacitor اړین کتابتونونه انسټالول
-          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem
+          # دلته مو د نوټیفیکیشن لپاره local او push پلګینونه ور زیات کړل
+          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets @capacitor/share @capacitor/filesystem @capacitor/local-notifications @capacitor/push-notifications
 
       - name: Build Web App
         run: npm run build
 
       - name: Sync with Capacitor
         run: |
-          # که پروژه مخکې init شوې وي، دا برخه ښايي ارور ورکړي، نو لومړی باید چک شي
-          # خو د اوس لپاره مو یوازې سینک کمانډونه منظم کړل
           npx cap init "طیب الکلام" "com.elyas.ktayyeb" --web-dir dist || true
           npx cap add android || true
           npx cap sync android
@@ -59,8 +57,8 @@ jobs:
         run: |
           cd android/app/src/main
           
-          # د سټوریج اجازې زیاتول
-          sed -i 's/<application/<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
+          # دلته مو د انډرایډ ۱۶ لپاره POST_NOTIFICATIONS اجازه ور زیاته کړه
+          sed -i 's/<application/<uses-permission android:name="android.permission.POST_NOTIFICATIONS"\/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"\/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <application/g' AndroidManifest.xml
           
           # د ډاونلوډ لپاره "ClearText" او "Legacy Storage" فعاله کول
           sed -i 's/<application/<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"/g' AndroidManifest.xml
