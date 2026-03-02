@@ -3,15 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
+
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { ContentProvider } from './context/ContentContext';
-import ConfirmDialog from './components/ConfirmDialog';
-import Layout from './components/Layout';
+
+// دلته د components ادرسونه بدل شول
+import ConfirmDialog from '../components/ConfirmDialog';
+import Layout from '../components/Layout';
+import SplashAndRegister from '../components/SplashAndRegister';
+
 import Home from './pages/Home';
 import Player from './pages/Player';
 import Favorites from './pages/Favorites';
@@ -22,12 +32,12 @@ import AdminPosts from './pages/AdminPosts';
 import AdminCategories from './pages/AdminCategories';
 import AdminTopPosts from './pages/AdminTopPosts';
 import CategoryPage from './pages/CategoryPage';
-import SplashAndRegister from './components/SplashAndRegister';
 import ProfileEdit from './pages/ProfileEdit';
 import Comments from './pages/Comments';
 
 import AdminUsers from './pages/AdminUsers';
 import AdminUserProfile from './pages/AdminUserProfile';
+
 
 function CapacitorHandler({ onExitRequest }: { onExitRequest: () => void }) {
   const navigate = useNavigate();
