@@ -12,8 +12,9 @@
 }
 
 @layer base {
-  html {
+  html, body {
     -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain; /* د پاڼې د ډېر کش کېدو مخنیوی او د انډرایډ طبیعي کشش پرېښودل */
   }
   
   /* د ټولو شیانو د سلیکشن مخنیوی */
