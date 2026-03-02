@@ -1,19 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { useContent, Comment } from '../context/ContentContext';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight, Send, User, MessageSquare, Heart, Edit3, Trash2, XCircle, CornerDownLeft, Copy, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-type ParamList = {
-  Comments: { id: string };
-};
-
 const Comments: React.FC = () => {
-  const route = useRoute<RouteProp<ParamList, 'Comments'>>();
-  const navigation = useNavigation<any>();
-  const id = route.params?.id;
-  
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { posts, currentUser, addComment, editComment, deleteComment, likeComment, isAdmin } = useContent();
   
   const post = posts.find(p => p.id === id);
@@ -27,30 +21,27 @@ const Comments: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   
-  const inputRef = useRef<TextInput>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollViewRef.current) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [comments.length]);
 
   if (!post) {
     return (
-      <View style={styles.emptyContainer}>
-        <MessageSquare size={48} color="#d1d5db" />
-        <Text style={styles.emptyText}>مطلب ونه موندل شو</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backLink}>بېرته تګ</Text>
-        </TouchableOpacity>
-      </View>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <MessageSquare size={48} className="text-zinc-300" />
+        <p className="text-zinc-500 font-bold">مطلب ونه موندل شو</p>
+        <button onClick={() => navigate(-1)} className="text-[var(--accent-color)] font-bold">بېرته تګ</button>
+      </div>
     );
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!newComment.trim() || !currentUser) return;
 
     setIsSubmitting(true);
@@ -87,8 +78,7 @@ const Comments: React.FC = () => {
   };
 
   const handleCopy = (comment: Comment) => {
-    // navigator.clipboard.writeText(comment.text);
-    alert('Copied to clipboard!');
+    navigator.clipboard.writeText(comment.text);
     setCopiedId(comment.id);
     setActiveMenuCommentId(null);
     setTimeout(() => setCopiedId(null), 2000);
@@ -114,181 +104,219 @@ const Comments: React.FC = () => {
     const parentComment = comment.parentId ? comments.find(c => c.id === comment.parentId) : null;
 
     return (
-      <View key={comment.id} style={styles.commentWrapper}>
-        <TouchableOpacity 
-          activeOpacity={0.9}
-          onPress={() => setActiveMenuCommentId(activeMenuCommentId === comment.id ? null : comment.id)}
-          style={[
-            styles.commentCard,
-            activeMenuCommentId === comment.id && styles.commentCardActive
-          ]}
+      <motion.div 
+        key={comment.id}
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative group"
+      >
+        {/* Drag to reply indicator */}
+        <div className="absolute inset-y-0 -left-12 flex items-center text-[var(--accent-color)] opacity-0 group-active:opacity-100 transition-opacity">
+          <CornerDownLeft size={24} />
+        </div>
+
+        <motion.div 
+          drag="x"
+          dragConstraints={{ left: 0, right: 80 }}
+          dragElastic={0.1}
+          dragSnapToOrigin={true}
+          onDragEnd={(_, info) => {
+            if (info.offset.x > 50) {
+              handleReply(comment);
+            }
+          }}
+          onClick={() => setActiveMenuCommentId(activeMenuCommentId === comment.id ? null : comment.id)}
+          className={`relative bg-white dark:bg-zinc-900 p-4 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm transition-all active:scale-[0.98] ${activeMenuCommentId === comment.id ? 'ring-2 ring-[var(--accent-color)]/30' : ''}`}
         >
           {/* Parent Reply Preview */}
           {parentComment && (
-            <View style={[styles.parentPreview, { borderRightColor: parentComment.userColor || 'var(--accent-color)' }]}>
-              <Text style={[styles.parentPreviewName, { color: parentComment.userColor }]}>{parentComment.userName}</Text>
-              <Text style={styles.parentPreviewText} numberOfLines={1}>{parentComment.text}</Text>
-            </View>
+            <div 
+              className="mb-2 p-2 bg-zinc-50 dark:bg-black/40 rounded-xl border-r-4 text-xs"
+              style={{ borderRightColor: parentComment.userColor || 'var(--accent-color)' }}
+            >
+              <span className="font-bold block mb-0.5" style={{ color: parentComment.userColor }}>{parentComment.userName}</span>
+              <p className="text-zinc-500 truncate">{parentComment.text}</p>
+            </div>
           )}
 
-          <View style={styles.commentHeader}>
-            <View style={styles.commentHeaderLeft}>
-              <View style={[styles.commentAvatar, { backgroundColor: comment.userColor || 'var(--accent-color)' }]}>
-                <Text style={styles.commentAvatarText}>{comment.userName.charAt(0)}</Text>
-              </View>
-              <View>
-                <Text style={[styles.commentName, { color: comment.userColor }]}>{comment.userName}</Text>
-                <Text style={styles.commentTime}>
-                  {new Date(comment.timestamp).toLocaleTimeString('fa-AF', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-              </View>
-            </View>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs text-white shadow-sm"
+                style={{ backgroundColor: comment.userColor || 'var(--accent-color)' }}
+              >
+                {comment.userName.charAt(0)}
+              </div>
+              <div>
+                <span className="font-bold text-sm block" style={{ color: comment.userColor }}>{comment.userName}</span>
+                <span className="text-[10px] text-zinc-400 block">{new Date(comment.timestamp).toLocaleTimeString('fa-AF', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            </div>
             
-            <TouchableOpacity 
-              onPress={(e) => {
-                e.stopPropagation();
-                likeComment(post.id, comment.id);
-              }}
-              style={[styles.likeButton, hasLiked && styles.likeButtonActive]}
-            >
-              <Heart size={14} color={hasLiked ? "#ef4444" : "#9ca3af"} fill={hasLiked ? "#ef4444" : "none"} />
-              <Text style={styles.likeCount}>{comment.likes || 0}</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <Text style={styles.commentText}>{comment.text}</Text>
+            <div className="flex items-center space-x-1 space-x-reverse">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  likeComment(post.id, comment.id);
+                }}
+                className={`flex items-center space-x-1 space-x-reverse px-2 py-1 rounded-lg transition-colors ${hasLiked ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+              >
+                <Heart size={14} fill={hasLiked ? "currentColor" : "none"} />
+                <span className="text-xs font-bold">{comment.likes || 0}</span>
+              </button>
+            </div>
+          </div>
+          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{comment.text}</p>
           
           {copiedId === comment.id && (
-            <View style={styles.copiedBadge}>
-              <Check size={10} color="white" />
-              <Text style={styles.copiedBadgeText}>کاپي شو</Text>
-            </View>
+            <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 animate-bounce">
+              <Check size={10} /> کاپي شو
+            </div>
           )}
-        </TouchableOpacity>
+        </motion.div>
 
-        {/* Context Menu */}
-        {activeMenuCommentId === comment.id && (
-          <View style={styles.contextMenuOverlay}>
-            <TouchableOpacity style={styles.contextMenuOverlayBg} onPress={() => setActiveMenuCommentId(null)} />
-            <View style={styles.contextMenu}>
-              <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleReply(comment)}>
-                <Text style={styles.contextMenuItemText}>ځواب</Text>
-                <CornerDownLeft size={16} color="#9ca3af" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleCopy(comment)}>
-                <Text style={styles.contextMenuItemText}>کاپي</Text>
-                <Copy size={16} color="#9ca3af" />
-              </TouchableOpacity>
-              {canEdit && (
-                <>
-                  <View style={styles.contextMenuDivider} />
-                  <TouchableOpacity style={styles.contextMenuItem} onPress={() => handleEdit(comment)}>
-                    <Text style={[styles.contextMenuItemText, { color: '#3b82f6' }]}>ایډیټ</Text>
-                    <Edit3 size={16} color="#3b82f6" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.contextMenuItem} onPress={() => { setCommentToDelete(comment.id); setActiveMenuCommentId(null); }}>
-                    <Text style={[styles.contextMenuItemText, { color: '#ef4444' }]}>حذف</Text>
-                    <Trash2 size={16} color="#ef4444" />
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </View>
-        )}
-      </View>
+        {/* Telegram-style Context Menu */}
+        <AnimatePresence>
+          {activeMenuCommentId === comment.id && (
+            <>
+              <div className="fixed inset-0 z-[60]" onClick={() => setActiveMenuCommentId(null)} />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                className="absolute left-4 top-4 z-[70] bg-white dark:bg-zinc-800 rounded-2xl shadow-2xl border border-zinc-100 dark:border-zinc-700 p-1 min-w-[140px] overflow-hidden"
+              >
+                <button 
+                  onClick={() => handleReply(comment)}
+                  className="w-full text-right px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-xl flex items-center justify-between text-sm font-bold transition-colors"
+                >
+                  <span>ځواب</span>
+                  <CornerDownLeft size={16} className="text-zinc-400" />
+                </button>
+                <button 
+                  onClick={() => handleCopy(comment)}
+                  className="w-full text-right px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-xl flex items-center justify-between text-sm font-bold transition-colors"
+                >
+                  <span>کاپي</span>
+                  <Copy size={16} className="text-zinc-400" />
+                </button>
+                {canEdit && (
+                  <>
+                    <div className="h-[1px] bg-zinc-100 dark:bg-zinc-700 my-1 mx-2" />
+                    <button 
+                      onClick={() => handleEdit(comment)}
+                      className="w-full text-right px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-xl flex items-center justify-between text-sm font-bold text-blue-500 transition-colors"
+                    >
+                      <span>ایډیټ</span>
+                      <Edit3 size={16} />
+                    </button>
+                    <button 
+                      onClick={() => { setCommentToDelete(comment.id); setActiveMenuCommentId(null); }}
+                      className="w-full text-right px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-xl flex items-center justify-between text-sm font-bold text-red-500 transition-colors"
+                    >
+                      <span>حذف</span>
+                      <Trash2 size={16} />
+                    </button>
+                  </>
+                )}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </motion.div>
     );
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* Top Navigation */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <ChevronRight size={24} color="#717a8b" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerSubtitle}>کمنټونه</Text>
-          <Text style={styles.headerTitle}>{comments.length} کمنټونه</Text>
-        </View>
-        <View style={{ width: 48 }} />
-      </View>
+    <div className="flex flex-col h-screen bg-zinc-50 dark:bg-black overflow-hidden">
+      {/* Top Navigation - Pinned */}
+      <div className="pt-safe bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50 z-50">
+        <div className="max-w-md mx-auto px-4 pb-3 pt-4 flex items-center justify-between">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 text-zinc-500 active:scale-90 transition-transform"
+          >
+            <ChevronRight size={24} />
+          </button>
+          <div className="text-center">
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">کمنټونه</span>
+            <div className="text-sm font-bold mt-1">{comments.length} کمنټونه</div>
+          </div>
+          <div className="w-12"></div>
+        </div>
+      </div>
 
-      {/* Comments List */}
-      <ScrollView 
-        ref={scrollViewRef}
-        style={styles.listContainer} 
-        contentContainerStyle={styles.listContent}
-      >
+      {/* Comments List - Scrollable Area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth">
         {comments.length === 0 ? (
-          <View style={styles.emptyListContainer}>
-            <View style={styles.emptyListIcon}>
-              <MessageSquare size={24} color="#9ca3af" />
-            </View>
-            <Text style={styles.emptyListTitle}>تر اوسه کوم کمنټ نه دی شوی</Text>
-            <Text style={styles.emptyListSubtitle}>لومړی کس شئ چې کمنټ لیکي!</Text>
-          </View>
+          <div className="text-center py-12 space-y-3">
+            <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto text-zinc-400">
+              <MessageSquare size={24} />
+            </div>
+            <p className="text-zinc-500 font-bold text-sm">تر اوسه کوم کمنټ نه دی شوی</p>
+            <p className="text-xs text-zinc-400">لومړی کس شئ چې کمنټ لیکي!</p>
+          </div>
         ) : (
           <>
             {comments.map(comment => renderComment(comment))}
+            <div ref={scrollRef} className="h-4" />
           </>
         )}
-      </ScrollView>
+      </div>
 
-      {/* Comment Input */}
-      <View style={styles.inputContainer}>
-        {(editingCommentId || replyingToId) && (
-          <View style={styles.actionPreview}>
-            <View style={styles.actionPreviewLeft}>
-              <View style={styles.actionPreviewIndicator} />
-              <View style={styles.actionPreviewTextContainer}>
-                <Text style={styles.actionPreviewTitle}>
-                  {editingCommentId ? 'کمنټ ایډیټ کول' : `ځواب: ${comments.find(c => c.id === replyingToId)?.userName}`}
-                </Text>
-                <Text style={styles.actionPreviewSubtitle} numberOfLines={1}>
-                  {editingCommentId ? comments.find(c => c.id === editingCommentId)?.text : comments.find(c => c.id === replyingToId)?.text}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity onPress={cancelAction} style={styles.cancelButton}>
-              <XCircle size={18} color="#9ca3af" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={styles.inputRow}>
-          <TextInput
-            ref={inputRef}
-            style={styles.textInput}
-            value={newComment}
-            onChangeText={setNewComment}
-            placeholder="خپل نظر ولیکئ..."
-            placeholderTextColor="#9ca3af"
-            multiline
-          />
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={!newComment.trim() || isSubmitting}
-            style={[
-              styles.sendButton,
-              (!newComment.trim() || isSubmitting) && styles.sendButtonDisabled
-            ]}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <View style={{ transform: [{ rotate: '180deg' }] }}>
-                <Send size={20} color="white" />
-              </View>
+      {/* Comment Input Fixed at Bottom */}
+      <div className="pb-safe bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 p-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+        <div className="max-w-md mx-auto">
+          <AnimatePresence>
+            {(editingCommentId || replyingToId) && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="flex items-center justify-between bg-zinc-50 dark:bg-black p-3 rounded-2xl mb-3 border border-zinc-200 dark:border-zinc-800"
+              >
+                <div className="flex items-center space-x-2 space-x-reverse text-sm overflow-hidden">
+                  <div className="w-1 h-8 bg-[var(--accent-color)] rounded-full shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-bold text-[var(--accent-color)] block text-xs">
+                      {editingCommentId ? 'کمنټ ایډیټ کول' : `ځواب: ${comments.find(c => c.id === replyingToId)?.userName}`}
+                    </span>
+                    <p className="text-zinc-500 text-xs truncate">
+                      {editingCommentId ? comments.find(c => c.id === editingCommentId)?.text : comments.find(c => c.id === replyingToId)?.text}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={cancelAction} className="text-zinc-400 hover:text-red-500 p-1 shrink-0">
+                  <XCircle size={18} />
+                </button>
+              </motion.div>
             )}
-          </TouchableOpacity>
-        </View>
-      </View>
+          </AnimatePresence>
+
+          <form onSubmit={handleSubmit} className="flex items-center space-x-2 space-x-reverse">
+            <input
+              ref={inputRef}
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="خپل نظر ولیکئ..."
+              className="flex-1 bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-2xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)] transition-all text-sm font-medium"
+            />
+            <button
+              type="submit"
+              disabled={!newComment.trim() || isSubmitting}
+              className="bg-[var(--accent-color)] text-white p-3 rounded-2xl active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 shadow-lg shadow-[var(--accent-color)]/20"
+            >
+              {isSubmitting ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send size={20} className="rotate-180" />
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
 
       <ConfirmDialog
         isOpen={!!commentToDelete}
@@ -297,323 +325,8 @@ const Comments: React.FC = () => {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setCommentToDelete(null)}
       />
-    </KeyboardAvoidingView>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#6b7280',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  backLink: {
-    color: '#10b981', // Fallback accent
-    fontWeight: 'bold',
-  },
-  header: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-    zIndex: 10,
-  },
-  backButton: {
-    padding: 12,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  headerTitleContainer: {
-    alignItems: 'center',
-  },
-  headerSubtitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginTop: 4,
-  },
-  listContainer: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 24,
-  },
-  emptyListContainer: {
-    alignItems: 'center',
-    paddingVertical: 48,
-  },
-  emptyListIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  emptyListTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  emptyListSubtitle: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-  commentWrapper: {
-    marginBottom: 16,
-    position: 'relative',
-  },
-  commentCard: {
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  commentCardActive: {
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-    borderWidth: 2,
-  },
-  parentPreview: {
-    backgroundColor: '#f9fafb',
-    padding: 8,
-    borderRadius: 12,
-    borderRightWidth: 4,
-    marginBottom: 8,
-  },
-  parentPreviewName: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 2,
-    textAlign: 'right',
-  },
-  parentPreviewText: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'right',
-  },
-  commentHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  commentHeaderLeft: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-  },
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  commentAvatarText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  commentName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'right',
-  },
-  commentTime: {
-    fontSize: 10,
-    color: '#9ca3af',
-    textAlign: 'right',
-  },
-  likeButton: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: '#f9fafb',
-  },
-  likeButtonActive: {
-    backgroundColor: '#fef2f2',
-  },
-  likeCount: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginRight: 4,
-    color: '#6b7280',
-  },
-  commentText: {
-    fontSize: 14,
-    color: '#374151',
-    lineHeight: 24,
-    textAlign: 'right',
-  },
-  copiedBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#10b981',
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  copiedBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    marginRight: 4,
-  },
-  contextMenuOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 50,
-  },
-  contextMenuOverlayBg: {
-    flex: 1,
-  },
-  contextMenu: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 4,
-    minWidth: 140,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  contextMenuItem: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  contextMenuItemText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  contextMenuDivider: {
-    height: 1,
-    backgroundColor: '#f3f4f6',
-    marginVertical: 4,
-    marginHorizontal: 8,
-  },
-  inputContainer: {
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-    padding: 16,
-    paddingBottom: 32, // safe area
-  },
-  actionPreview: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  actionPreviewLeft: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    flex: 1,
-  },
-  actionPreviewIndicator: {
-    width: 4,
-    height: 32,
-    backgroundColor: '#10b981',
-    borderRadius: 2,
-    marginLeft: 8,
-  },
-  actionPreviewTextContainer: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  actionPreviewTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#10b981',
-    textAlign: 'right',
-  },
-  actionPreviewSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'right',
-  },
-  cancelButton: {
-    padding: 4,
-  },
-  inputRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    textAlign: 'right',
-    maxHeight: 100,
-  },
-  sendButton: {
-    backgroundColor: '#10b981',
-    padding: 12,
-    borderRadius: 16,
-    marginLeft: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    opacity: 0.5,
-  },
-});
 
 export default Comments;

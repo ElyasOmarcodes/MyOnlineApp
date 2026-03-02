@@ -13,24 +13,6 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
-        'react-native': 'react-native-web',
-      },
-      extensions: [
-        '.web.js',
-        '.web.jsx',
-        '.web.ts',
-        '.web.tsx',
-        '.js',
-        '.jsx',
-        '.ts',
-        '.tsx'
-      ],
-    },
-    optimizeDeps: {
-      esbuildOptions: {
-        loader: {
-          '.js': 'jsx',
-        },
       },
     },
     server: {

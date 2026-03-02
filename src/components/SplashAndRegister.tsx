@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { BookOpen, User, Phone, ArrowRight, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { BookOpen, User, Phone, ArrowRight, Sparkles, Moon, Star } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
-
-const { width, height } = Dimensions.get('window');
 
 const SplashAndRegister: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const { currentUser, registerUser } = useContent();
@@ -42,7 +40,8 @@ const SplashAndRegister: React.FC<{ onComplete: () => void }> = ({ onComplete })
     };
   }, [currentUser, onComplete]);
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!name.trim() || !phone.trim()) {
       setError('مهرباني وکړئ نوم او د موبایل شمېره ولیکئ');
       return;
@@ -51,335 +50,147 @@ const SplashAndRegister: React.FC<{ onComplete: () => void }> = ({ onComplete })
     onComplete();
   };
 
-  if (showSplash) {
-    return (
-      <View style={styles.splashContainer}>
-        <View style={styles.backgroundEffect1} />
-        <View style={styles.backgroundEffect2} />
-        
-        <View style={styles.logoContainer}>
-          <View style={styles.logoGlow} />
-          <View style={styles.logoInner}>
-            <BookOpen size={56} color="#10b981" strokeWidth={1.5} />
-            <Sparkles size={24} color="#fbbf24" style={styles.sparkleIcon} />
-          </View>
-        </View>
-
-        <View style={styles.splashTextContainer}>
-          <Text style={styles.splashTitle}>اسلامي مطالب</Text>
-          <Text style={styles.splashSubtitle}>
-            د دیني معلوماتو او ښکلو ویناوو غوره ټولګه
-          </Text>
-          
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-            </View>
-            <View style={styles.progressTextRow}>
-              <Text style={styles.progressLabel}>باریږي...</Text>
-              <Text style={styles.progressValue}>{Math.round(progress)}%</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <KeyboardAvoidingView 
-      style={styles.registerContainer} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.registerScroll}>
-        <View style={styles.registerCard}>
-          <View style={styles.cardHeader}>
-            <View style={styles.userIconContainer}>
-              <User size={32} color="#10b981" strokeWidth={1.5} />
-            </View>
-            <Text style={styles.cardTitle}>ښه راغلاست!</Text>
-            <Text style={styles.cardSubtitle}>د کمنټونو لیکلو لپاره خپل معلومات ثبت کړئ</Text>
-          </View>
+    <div className="fixed inset-0 z-[200] bg-zinc-50 dark:bg-black flex flex-col items-center justify-center overflow-hidden pt-safe pb-safe" dir="rtl">
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] right-[-10%] w-[70%] h-[70%] bg-[var(--accent-color)]/20 dark:bg-[var(--accent-color)]/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-500/10 dark:bg-blue-500/10 rounded-full blur-[100px]" />
+      </div>
 
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>ستاسو نوم</Text>
-              <View style={styles.inputWrapper}>
-                <User size={20} color="#9ca3af" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="احمد..."
-                  placeholderTextColor="#9ca3af"
-                  textAlign="right"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>د موبایل شمېره</Text>
-              <View style={styles.inputWrapper}>
-                <Phone size={20} color="#9ca3af" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="07..."
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="phone-pad"
-                  textAlign="left"
-                />
-              </View>
-            </View>
-
-            {error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
-            <TouchableOpacity 
-              style={styles.submitButton} 
-              onPress={handleSubmit}
-              activeOpacity={0.8}
+      <AnimatePresence mode="wait">
+        {showSplash ? (
+          <motion.div
+            key="splash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            className="relative z-10 flex flex-col items-center justify-center w-full h-full"
+          >
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
+              className="relative"
             >
-              <Text style={styles.submitButtonText}>ننوتل</Text>
-              <ArrowRight size={20} color="white" style={styles.submitIcon} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+              <div className="absolute inset-0 bg-[var(--accent-color)] rounded-[40px] blur-2xl opacity-40 animate-pulse" />
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 bg-white dark:bg-zinc-900 rounded-[40px] border border-zinc-100 dark:border-zinc-800 flex items-center justify-center shadow-2xl">
+                <BookOpen size={56} className="text-[var(--accent-color)]" strokeWidth={1.5} />
+                <Sparkles size={24} className="absolute -top-3 -right-3 text-amber-400 animate-bounce" fill="currentColor" />
+              </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              className="text-center mt-12 space-y-6 w-full max-w-[280px]"
+            >
+              <div className="space-y-2">
+                <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-800 dark:text-zinc-100">اسلامي مطالب</h1>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium leading-relaxed">
+                  د دیني معلوماتو او ښکلو ویناوو غوره ټولګه
+                </p>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-[var(--accent-color)]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ ease: "linear" }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                  <span>باریږي...</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="register"
+            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 100, damping: 20 }}
+            className="relative z-10 w-full max-w-md px-6"
+          >
+            <div className="bg-white dark:bg-zinc-900 rounded-[40px] p-8 sm:p-10 border border-zinc-100 dark:border-zinc-800 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--accent-color)]/10 rounded-full blur-3xl -mr-16 -mt-16" />
+              
+              <div className="relative z-10 text-center space-y-3 mb-10">
+                <div className="w-16 h-16 bg-[var(--accent-color)]/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-[var(--accent-color)]/20">
+                  <User size={32} className="text-[var(--accent-color)]" strokeWidth={1.5} />
+                </div>
+                <h2 className="text-3xl font-black text-zinc-800 dark:text-zinc-100 tracking-tight">ښه راغلاست!</h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">د کمنټونو لیکلو لپاره خپل معلومات ثبت کړئ</p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="relative z-10 space-y-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-zinc-400 mr-2">ستاسو نوم</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none text-zinc-400 group-focus-within:text-[var(--accent-color)] transition-colors">
+                      <User size={20} />
+                    </div>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-[24px] py-4 pr-14 pl-5 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)] transition-all font-bold text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 text-base"
+                      placeholder="احمد..."
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-zinc-400 mr-2">د موبایل شمېره</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none text-zinc-400 group-focus-within:text-[var(--accent-color)] transition-colors">
+                      <Phone size={20} />
+                    </div>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-[24px] py-4 pr-14 pl-5 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]/20 focus:border-[var(--accent-color)] transition-all font-bold text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 text-left text-base"
+                      placeholder="07..."
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {error && (
+                    <motion.p 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="text-red-500 text-xs font-bold text-center bg-red-50 dark:bg-red-500/10 py-2 rounded-xl border border-red-100 dark:border-red-500/20"
+                    >
+                      {error}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+
+                <button
+                  type="submit"
+                  className="w-full bg-[var(--accent-color)] text-white font-black py-5 rounded-[24px] shadow-xl shadow-[var(--accent-color)]/30 active:scale-[0.98] transition-all hover:brightness-110 flex items-center justify-center space-x-3 space-x-reverse mt-8 text-lg group"
+                >
+                  <span>ننوتل</span>
+                  <ArrowRight size={20} className="group-hover:-translate-x-1 transition-transform" />
+                </button>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  splashContainer: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backgroundEffect1: {
-    position: 'absolute',
-    top: -height * 0.1,
-    right: -width * 0.1,
-    width: width * 0.7,
-    height: width * 0.7,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderRadius: width * 0.35,
-  },
-  backgroundEffect2: {
-    position: 'absolute',
-    bottom: -height * 0.1,
-    left: -width * 0.1,
-    width: width * 0.6,
-    height: width * 0.6,
-    backgroundColor: 'rgba(59, 130, 246, 0.05)',
-    borderRadius: width * 0.3,
-  },
-  logoContainer: {
-    position: 'relative',
-    marginBottom: 48,
-  },
-  logoGlow: {
-    position: 'absolute',
-    inset: 0,
-    backgroundColor: '#10b981',
-    borderRadius: 40,
-    opacity: 0.2,
-    transform: [{ scale: 1.2 }],
-  },
-  logoInner: {
-    width: 128,
-    height: 128,
-    backgroundColor: 'white',
-    borderRadius: 40,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 5,
-  },
-  sparkleIcon: {
-    position: 'absolute',
-    top: -12,
-    right: -12,
-  },
-  splashTextContainer: {
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 48,
-  },
-  splashTitle: {
-    fontSize: 40,
-    fontWeight: '900',
-    color: '#1f2937',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  splashSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 48,
-  },
-  progressContainer: {
-    width: '100%',
-    gap: 8,
-  },
-  progressBarBg: {
-    height: 6,
-    width: '100%',
-    backgroundColor: '#e5e7eb',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#10b981',
-  },
-  progressTextRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  progressValue: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#9ca3af',
-  },
-  registerContainer: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  registerScroll: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  registerCard: {
-    backgroundColor: 'white',
-    borderRadius: 40,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.1,
-    shadowRadius: 30,
-    elevation: 10,
-  },
-  cardHeader: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  userIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 24,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  cardTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#1f2937',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  cardSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  form: {
-    gap: 20,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginRight: 8,
-    textAlign: 'right',
-  },
-  inputWrapper: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    height: 56,
-  },
-  inputIcon: {
-    marginLeft: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  errorContainer: {
-    backgroundColor: '#fef2f2',
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#fee2e2',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  submitButton: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#10b981',
-    height: 64,
-    borderRadius: 24,
-    marginTop: 12,
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 5,
-  },
-  submitButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  submitIcon: {
-    marginRight: 12,
-  },
-});
 
 export default SplashAndRegister;

@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ref, onValue, push, set, update, remove } from 'firebase/database';
+import { ref, onValue, push, set, update, remove, query, limitToLast, orderByChild } from 'firebase/database';
 import { db } from '../lib/firebase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { Network } from '@capacitor/network';
+import { Capacitor } from '@capacitor/core';
 
 export interface Comment {
   id: string;
@@ -82,65 +84,101 @@ const USER_COLORS = [
 ];
 
 export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [topPosts, setTopPosts] = useState<Post[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [posts, setPosts] = useState<Post[]>(() => {
+    try {
+      const saved = localStorage.getItem('cached_posts');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [topPosts, setTopPosts] = useState<Post[]>(() => {
+    try {
+      const saved = localStorage.getItem('cached_top_posts');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  
+  const [categories, setCategories] = useState<Category[]>(() => {
+    try {
+      const saved = localStorage.getItem('cached_categories');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [viewedPosts, setViewedPosts] = useState<string[]>([]);
-
-  // Initial load from AsyncStorage
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const [
-          cachedPosts,
-          cachedTopPosts,
-          cachedCategories,
-          appUser,
-          adminStatus,
-          favPosts,
-          viewed
-        ] = await Promise.all([
-          AsyncStorage.getItem('cached_posts'),
-          AsyncStorage.getItem('cached_top_posts'),
-          AsyncStorage.getItem('cached_categories'),
-          AsyncStorage.getItem('app_user'),
-          AsyncStorage.getItem('is_admin'),
-          AsyncStorage.getItem('favorites_posts'),
-          AsyncStorage.getItem('viewed_posts')
-        ]);
-
-        if (cachedPosts) setPosts(JSON.parse(cachedPosts));
-        if (cachedTopPosts) setTopPosts(JSON.parse(cachedTopPosts));
-        if (cachedCategories) setCategories(JSON.parse(cachedCategories));
-        if (appUser) setCurrentUser(JSON.parse(appUser));
-        if (adminStatus === 'true') setIsAdmin(true);
-        if (favPosts) setFavorites(JSON.parse(favPosts));
-        if (viewed) setViewedPosts(JSON.parse(viewed));
-      } catch (e) {
-        console.error('Error loading initial data from AsyncStorage', e);
-      } finally {
-        setLoading(false);
+  
+  const [loading, setLoading] = useState(() => {
+    // If we have cached posts, don't show the initial loading spinner
+    return localStorage.getItem('cached_posts') === null;
+  });
+  
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('app_user');
+      if (saved) {
+        const user = JSON.parse(saved);
+        // Ensure existing users get a color if they don't have one
+        if (user && !user.color) {
+          user.color = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+          localStorage.setItem('app_user', JSON.stringify(user));
+        }
+        return user;
       }
-    };
+      return null;
+    } catch (e) {
+      return null;
+    }
+  });
 
-    loadInitialData();
-  }, []);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    return localStorage.getItem('is_admin') === 'true';
+  });
 
   const checkNetwork = async () => {
-    // In a real React Native app, we'd use NetInfo
-    // For now, we'll assume connected as we don't have NetInfo installed
-    return true;
+    if (Capacitor.isNativePlatform()) {
+      const status = await Network.getStatus();
+      return status.connected;
+    }
+    return navigator.onLine;
   };
 
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('favorites_posts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (e) {
+      console.error('Error loading favorites from localStorage', e);
+    }
+    return [];
+  });
+
+  const [viewedPosts, setViewedPosts] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('viewed_posts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (e) {
+      console.error('Error loading viewed_posts from localStorage', e);
+    }
+    return [];
+  });
+
   useEffect(() => {
+    // Safety timeout to prevent infinite loading if Firebase fails silently
     const safetyTimer = setTimeout(() => {
       setLoading(false);
-    }, 10000);
+    }, 10000); // 10 seconds max loading
 
     const postsRef = ref(db, 'posts');
     const unsubscribePosts = onValue(postsRef, (snapshot) => {
@@ -153,10 +191,10 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
             ...value,
           })).sort((a, b) => b.timestamp - a.timestamp);
           setPosts(postsList);
-          AsyncStorage.setItem('cached_posts', JSON.stringify(postsList));
+          localStorage.setItem('cached_posts', JSON.stringify(postsList));
         } else {
           setPosts([]);
-          AsyncStorage.setItem('cached_posts', JSON.stringify([]));
+          localStorage.setItem('cached_posts', JSON.stringify([]));
         }
       } catch (err) {
         console.error("Error parsing posts:", err);
@@ -179,10 +217,10 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
             ...value,
           })).sort((a, b) => b.timestamp - a.timestamp);
           setTopPosts(list);
-          AsyncStorage.setItem('cached_top_posts', JSON.stringify(list));
+          localStorage.setItem('cached_top_posts', JSON.stringify(list));
         } else {
           setTopPosts([]);
-          AsyncStorage.setItem('cached_top_posts', JSON.stringify([]));
+          localStorage.setItem('cached_top_posts', JSON.stringify([]));
         }
       } catch (err) {
         console.error("Error parsing top posts:", err);
@@ -201,8 +239,9 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
             order: value.order || 0
           })).sort((a, b) => a.order - b.order);
           setCategories(cats);
-          AsyncStorage.setItem('cached_categories', JSON.stringify(cats));
+          localStorage.setItem('cached_categories', JSON.stringify(cats));
         } else {
+          // Initialize defaults only if truly empty and not just loading
           const defaultCats = [
             { name: 'عمومي', icon: 'BookOpen' },
             { name: 'حدیث', icon: 'Book' },
@@ -212,7 +251,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           ];
           const cats = defaultCats.map((c, i) => ({ id: `def-${i}`, ...c }));
           setCategories(cats);
-          AsyncStorage.setItem('cached_categories', JSON.stringify(cats));
+          localStorage.setItem('cached_categories', JSON.stringify(cats));
         }
       } catch (err) {
         console.error("Error parsing categories:", err);
@@ -229,11 +268,11 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   useEffect(() => {
-    AsyncStorage.setItem('favorites_posts', JSON.stringify(favorites));
+    localStorage.setItem('favorites_posts', JSON.stringify(favorites));
   }, [favorites]);
 
   useEffect(() => {
-    AsyncStorage.setItem('viewed_posts', JSON.stringify(viewedPosts));
+    localStorage.setItem('viewed_posts', JSON.stringify(viewedPosts));
   }, [viewedPosts]);
 
   const registerUser = (name: string, phone: string) => {
@@ -245,7 +284,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       color: randomColor
     };
     setCurrentUser(newUser);
-    AsyncStorage.setItem('app_user', JSON.stringify(newUser));
+    localStorage.setItem('app_user', JSON.stringify(newUser));
   };
 
   const updateUser = (name: string, phone: string) => {
@@ -253,7 +292,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const color = currentUser.color || USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
       const updatedUser = { ...currentUser, name, phone, color };
       setCurrentUser(updatedUser);
-      AsyncStorage.setItem('app_user', JSON.stringify(updatedUser));
+      localStorage.setItem('app_user', JSON.stringify(updatedUser));
     }
   };
 
@@ -269,7 +308,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const post = posts.find(p => p.id === id);
     if (post) {
       const likedBy = post.likedBy || {};
-      if (likedBy[currentUser.id]) return;
+      if (likedBy[currentUser.id]) return; // Already liked
 
       const postRef = ref(db, `posts/${id}`);
       await update(postRef, {
@@ -358,6 +397,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
     } else {
+      // Delete posts in this category
       const updates: Record<string, any> = {};
       posts.forEach(post => {
         if (post.category === catToDelete.name) {
@@ -397,7 +437,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (post && post.comments && post.comments[commentId]) {
       const comment = post.comments[commentId];
       const likedBy = comment.likedBy || {};
-      if (likedBy[currentUser.id]) return;
+      if (likedBy[currentUser.id]) return; // Already liked
 
       const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
       await update(commentRef, {
@@ -421,6 +461,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const topRef = ref(db, 'topPosts');
     const newTopRef = push(topRef);
     
+    // Maintain only 10 latest
     if (topPosts.length >= 10) {
       const oldest = topPosts[topPosts.length - 1];
       await remove(ref(db, `topPosts/${oldest.id}`));
@@ -440,7 +481,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const login = (user: string, pass: string) => {
     if (user === 'Elyas412' && pass === 'Omar412') {
       setIsAdmin(true);
-      AsyncStorage.setItem('is_admin', 'true');
+      localStorage.setItem('is_admin', 'true');
       return true;
     }
     return false;
@@ -448,7 +489,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const logout = () => {
     setIsAdmin(false);
-    AsyncStorage.removeItem('is_admin');
+    localStorage.removeItem('is_admin');
   };
 
   const value = React.useMemo(() => ({ 

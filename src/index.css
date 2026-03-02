@@ -14,19 +14,10 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior: none;
   }
   
   body {
     @apply bg-zinc-50 dark:bg-black transition-colors duration-300;
-    user-select: none;
-    -webkit-user-select: none;
-    overscroll-behavior: none;
-  }
-
-  input, textarea {
-    user-select: auto;
-    -webkit-user-select: auto;
   }
 }
 

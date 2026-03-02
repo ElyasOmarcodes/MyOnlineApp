@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { ChevronLeft, Search, Sparkles, BookOpen, Clock, Heart, MessageSquare, Eye, Filter } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useContent, Post } from '../context/ContentContext';
-import { useNavigation, useRoute } from '@react-navigation/native';
-
-const { width } = Dimensions.get('window');
+import { useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 
 const Home: React.FC = () => {
   const { posts, setCurrentPost, favorites, loading, incrementViews, categories, topPosts } = useContent();
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<'title' | 'content' | 'both'>('both');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [currentTopIndex, setCurrentTopIndex] = useState(0);
 
   useEffect(() => {
-    if (route.params?.search) {
-      setSearchQuery(route.params.search);
+    const params = new URLSearchParams(location.search);
+    const search = params.get('search');
+    if (search) {
+      setSearchQuery(search);
     }
-  }, [route.params?.search]);
+  }, [location.search]);
 
   // Auto-scroll top posts
   useEffect(() => {
@@ -35,7 +35,7 @@ const Home: React.FC = () => {
   const handleView = (post: Post) => {
     incrementViews(post.id);
     setCurrentPost(post);
-    navigation.navigate('Player');
+    navigate('/player');
   };
 
   const filteredPosts = posts.filter(p => {
@@ -53,9 +53,9 @@ const Home: React.FC = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text>Loading...</Text>
-      </View>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[var(--accent-color)] border-t-transparent rounded-full animate-spin" />
+      </div>
     );
   }
 
@@ -70,426 +70,254 @@ const Home: React.FC = () => {
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <div className="space-y-8 pb-12">
       {/* Hero Section / Top Posts Carousel */}
-      <View style={styles.heroContainer}>
-        {topPosts && topPosts.length > 0 ? (
-          <TouchableOpacity 
-            style={styles.heroCard}
-            onPress={() => handleView(topPosts[currentTopIndex])}
-          >
-            <View style={styles.heroHeader}>
-              <View style={styles.heroBadge}>
-                <Sparkles size={16} color="#fbbf24" />
-                <Text style={styles.heroBadgeText}>غوره مطلب</Text>
-              </View>
-              <View style={styles.dotsContainer}>
-                {topPosts.map((_, idx) => (
-                  <View 
-                    key={idx} 
-                    style={[styles.dot, idx === currentTopIndex && styles.activeDot]}
-                  />
-                ))}
-              </View>
-            </View>
-            <Text style={styles.heroTitle} numberOfLines={2}>{topPosts[currentTopIndex].title}</Text>
-            <View style={styles.heroFooter}>
-              <Text style={styles.heroContent} numberOfLines={2}>
-                {topPosts[currentTopIndex].content}
-              </Text>
-              <View style={styles.heroIconContainer}>
-                <ChevronLeft size={20} color="white" />
-              </View>
-            </View>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.heroCard}>
-            <View style={styles.heroBadge}>
-              <BookOpen size={20} color="white" />
-              <Text style={styles.heroBadgeText}>اسلامي مطالب</Text>
-            </View>
-            <Text style={styles.heroTitle}>اسلامي مطالب او ښکلې ویناوې</Text>
-            <Text style={styles.heroContent}>
-              دلته تاسو کولی شئ د روژې او اسلام په اړه غوره لیکنې او مطالب ولولئ.
-            </Text>
-          </View>
-        )}
-      </View>
+      <div className="relative h-[220px] sm:h-[260px]">
+        <AnimatePresence mode="wait">
+          {topPosts && topPosts.length > 0 ? (
+            <motion.div
+              key={topPosts[currentTopIndex].id}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+              onClick={() => handleView(topPosts[currentTopIndex])}
+              className="absolute inset-0 cursor-pointer overflow-hidden rounded-[32px] sm:rounded-[40px] bg-[var(--accent-color)] p-6 sm:p-8 text-white shadow-xl shadow-[var(--accent-color)]/20 flex flex-col justify-between"
+            >
+              <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <path d="M0 100 C 20 0 50 0 100 100 Z" fill="currentColor" />
+                </svg>
+              </div>
+              
+              <div className="relative z-10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-md">
+                      <Sparkles size={16} className="text-amber-300" />
+                    </div>
+                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest opacity-90">غوره مطلب</span>
+                  </div>
+                  <div className="flex space-x-1 space-x-reverse">
+                    {topPosts.map((_, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentTopIndex ? 'bg-white w-4' : 'bg-white/30'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black leading-tight line-clamp-2">{topPosts[currentTopIndex].title}</h1>
+              </div>
+
+              <div className="relative z-10 flex items-center justify-between mt-auto">
+                <p className="text-white/80 text-xs font-medium line-clamp-2 max-w-[70%]">
+                  {topPosts[currentTopIndex].content}
+                </p>
+                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                  <ChevronLeft size={20} />
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <header className="absolute inset-0 overflow-hidden rounded-[32px] sm:rounded-[40px] bg-[var(--accent-color)] p-6 sm:p-8 text-white shadow-xl shadow-[var(--accent-color)]/20">
+              <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <path d="M0 100 C 20 0 50 0 100 100 Z" fill="currentColor" />
+                </svg>
+              </div>
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-md">
+                    <BookOpen size={20} />
+                  </div>
+                  <span className="text-xs font-medium opacity-90">اسلامي مطالب</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold leading-tight">اسلامي مطالب او ښکلې ویناوې</h1>
+                <p className="text-white/80 text-xs sm:text-sm max-w-[240px]">
+                  دلته تاسو کولی شئ د روژې او اسلام په اړه غوره لیکنې او مطالب ولولئ.
+                </p>
+              </div>
+            </header>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Search size={20} color="#9ca3af" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
+      <div className="relative max-w-2xl mx-auto w-full z-20">
+        <div className="relative group">
+          <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none text-zinc-400 group-focus-within:text-[var(--accent-color)] transition-all duration-300 group-focus-within:scale-110">
+            <Search size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
+          </div>
+          <input
+            type="text"
             placeholder="ټول مطالب ولټوئ..."
             value={searchQuery}
-            onChangeText={setSearchQuery}
-            textAlign="right"
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white dark:bg-zinc-900 border-2 border-zinc-50 dark:border-zinc-800 rounded-[24px] sm:rounded-[28px] py-4 sm:py-5 pr-12 sm:pr-14 pl-14 sm:pl-16 text-sm sm:text-base font-bold placeholder:text-zinc-400 placeholder:font-medium focus:outline-none focus:ring-8 focus:ring-[var(--accent-color)]/5 focus:border-[var(--accent-color)] transition-all shadow-xl shadow-zinc-200/20 dark:shadow-none"
           />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-              <Text style={styles.clearButtonText}>✕</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
+          <div className="absolute inset-y-0 left-2 flex items-center space-x-1 space-x-reverse">
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
+              >
+                <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                  <span className="text-xs font-black">✕</span>
+                </div>
+              </button>
+            )}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                className={`p-2 rounded-xl transition-colors ${showFilterMenu || searchType !== 'both' ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/10' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+              >
+                <Filter size={20} />
+              </button>
+              
+              <AnimatePresence>
+                {showFilterMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute left-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden z-50"
+                    >
+                      <div className="p-2 space-y-1">
+                        <div className="px-3 py-2 text-[10px] font-black text-zinc-400 uppercase tracking-wider">پلټنه په:</div>
+                        {[
+                          { id: 'both', label: 'ټول (عنوان او متن)' },
+                          { id: 'title', label: 'یوازې عنوان کې' },
+                          { id: 'content', label: 'یوازې متن کې' }
+                        ].map(option => (
+                          <button
+                            key={option.id}
+                            onClick={() => {
+                              setSearchType(option.id as any);
+                              setShowFilterMenu(false);
+                            }}
+                            className={`w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                              searchType === option.id 
+                                ? 'bg-[var(--accent-color)]/10 text-[var(--accent-color)]' 
+                                : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Categories */}
-      <View style={styles.categoriesGrid}>
-        {categoryCards.map((cat, i) => {
-          const IconComp = cat.icon;
-          return (
-            <TouchableOpacity 
-              key={i} 
-              style={styles.categoryCard}
-              onPress={() => navigation.navigate('Category', { id: cat.id })}
-            >
-              <View style={styles.categoryHeader}>
-                <View style={styles.categoryIconContainer}>
-                  <IconComp size={20} color="#10b981" />
-                </View>
-                <View style={styles.categoryArrowContainer}>
-                  <ChevronLeft size={14} color="#9ca3af" />
-                </View>
-              </View>
-              <View style={styles.categoryTextContainer}>
-                <Text style={styles.categoryLabel}>{cat.label}</Text>
-                <Text style={styles.categoryCount}>{cat.count} موضوعات</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        {categoryCards.map((cat, i) => (
+          <motion.button 
+            key={i} 
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate(`/category/${cat.id}`)}
+            className="group relative bg-white dark:bg-zinc-900 p-4 sm:p-5 rounded-[24px] sm:rounded-[32px] border border-zinc-100 dark:border-zinc-800 text-right space-y-3 sm:space-y-4 shadow-sm hover:shadow-xl hover:shadow-[var(--accent-color)]/10 transition-all w-full overflow-hidden"
+          >
+            <div className="absolute -right-4 -top-4 w-20 h-20 sm:w-24 sm:h-24 bg-[var(--accent-color)]/5 rounded-full blur-2xl group-hover:bg-[var(--accent-color)]/10 transition-colors pointer-events-none" />
+            <div className="flex items-center justify-between relative z-10">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[var(--accent-color)]/10 text-[var(--accent-color)] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <cat.icon size={20} className="sm:w-6 sm:h-6" strokeWidth={2} />
+              </div>
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:bg-[var(--accent-color)] group-hover:text-white transition-colors">
+                <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
+              </div>
+            </div>
+            <div className="space-y-1 relative z-10">
+              <div className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-100">{cat.label}</div>
+              <div className="text-[9px] sm:text-[10px] font-bold text-zinc-400">{cat.count} موضوعات</div>
+            </div>
+          </motion.button>
+        ))}
+      </div>
 
       {/* List Section */}
-      <View style={styles.listSection}>
-        <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>وروستي خپاره شوي</Text>
-          <Text style={styles.listCount}>{filteredPosts.length} مطالب</Text>
-        </View>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xl font-bold">وروستي خپاره شوي</h2>
+          <span className="text-xs text-zinc-400">{filteredPosts.length} مطالب</span>
+        </div>
 
-        <View style={styles.listContainer}>
+        <motion.div 
+          className="space-y-3"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            visible: {
+              transition: {
+                staggerChildren: 0.05
+              }
+            }
+          }}
+        >
           {filteredPosts.map((post) => (
-            <TouchableOpacity
+            <motion.button
               key={post.id}
-              style={styles.postCard}
-              onPress={() => handleView(post)}
+              variants={{
+                hidden: { opacity: 0, y: 20, scale: 0.98 },
+                visible: { opacity: 1, y: 0, scale: 1 }
+              }}
+              transition={{ 
+                duration: 0.4,
+                ease: [0.23, 1, 0.32, 1]
+              }}
+              whileHover={{ scale: 1.01, x: -4 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleView(post)}
+              className="w-full flex items-center p-4 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-[var(--accent-color)]/30 transition-all group"
             >
-              <View style={styles.postIconContainer}>
-                <MessageSquare size={24} color="#9ca3af" />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:bg-[var(--accent-color)]/10 group-hover:text-[var(--accent-color)] transition-colors">
+                  <MessageSquare size={24} className="opacity-40 group-hover:opacity-100" />
+                </div>
                 {(favorites || []).includes(post.id) && (
-                  <View style={styles.favoriteBadge}>
-                    <Heart size={10} color="white" fill="white" />
-                  </View>
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center text-white">
+                    <Heart size={10} fill="currentColor" />
+                  </div>
                 )}
-              </View>
+              </div>
               
-              <View style={styles.postContentContainer}>
-                <View style={styles.postTitleRow}>
-                  <View style={styles.postCategoryBadge}>
-                    <Text style={styles.postCategoryText}>{post.category}</Text>
-                  </View>
-                  <Text style={styles.postTitle} numberOfLines={1}>{post.title}</Text>
-                </View>
-                <Text style={styles.postExcerpt} numberOfLines={1}>{post.content}</Text>
-              </View>
+              <div className="mr-4 flex-1 text-right">
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <span className="text-[10px] font-bold text-[var(--accent-color)] bg-[var(--accent-color)]/10 px-2 py-0.5 rounded-full">
+                    {post.category}
+                  </span>
+                  <h3 className="font-bold text-lg group-hover:text-[var(--accent-color)] transition-colors line-clamp-1">{post.title}</h3>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">{post.content}</p>
+              </div>
 
-              <View style={styles.postMetaContainer}>
-                <View style={styles.postViewsContainer}>
-                  <Eye size={12} color="#9ca3af" />
-                  <Text style={styles.postViewsText}>{post.views || 0}</Text>
-                </View>
-                <ChevronLeft size={20} color="#d1d5db" />
-                <Text style={styles.postDateText}>
+              <div className="flex flex-col items-end space-y-1">
+                <div className="flex items-center space-x-1 space-x-reverse text-zinc-400">
+                  <Eye size={12} />
+                  <span className="text-[10px] font-bold">{post.views || 0}</span>
+                </div>
+                <div className="text-zinc-300 dark:text-zinc-700">
+                  <ChevronLeft size={20} />
+                </div>
+                <span className="text-[10px] text-zinc-400 font-mono">
                   {new Date(post.timestamp).toLocaleDateString('fa-AF')}
-                </Text>
-              </View>
-            </TouchableOpacity>
+                </span>
+              </div>
+            </motion.button>
           ))}
-        </View>
-      </View>
-    </ScrollView>
+        </motion.div>
+      </div>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroContainer: {
-    height: 220,
-    marginBottom: 24,
-  },
-  heroCard: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    borderRadius: 32,
-    padding: 24,
-    justifyContent: 'space-between',
-  },
-  heroHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heroBadge: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  heroBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginRight: 4,
-  },
-  dotsContainer: {
-    flexDirection: 'row-reverse',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    marginLeft: 4,
-  },
-  activeDot: {
-    width: 16,
-    backgroundColor: 'white',
-  },
-  heroTitle: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'right',
-  },
-  heroFooter: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heroContent: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    flex: 1,
-    textAlign: 'right',
-    marginLeft: 16,
-  },
-  heroIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchContainer: {
-    marginBottom: 24,
-  },
-  searchInputContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    paddingHorizontal: 16,
-    height: 56,
-  },
-  searchIcon: {
-    marginLeft: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    textAlign: 'right',
-  },
-  clearButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  clearButtonText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-  },
-  categoriesGrid: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  categoryCard: {
-    width: (width - 48) / 2,
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  categoryHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  categoryIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  categoryArrowContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#f9fafb',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  categoryTextContainer: {
-    alignItems: 'flex-end',
-  },
-  categoryLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  categoryCount: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-  },
-  listSection: {
-    marginBottom: 24,
-  },
-  listHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  listTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  listCount: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-  listContainer: {
-    gap: 12,
-  },
-  postCard: {
-    flexDirection: 'row-reverse',
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    alignItems: 'center',
-  },
-  postIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#f9fafb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 16,
-  },
-  favoriteBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#ef4444',
-    borderWidth: 2,
-    borderColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  postContentContainer: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  postTitleRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  postCategoryBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  postCategoryText: {
-    color: '#10b981',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  postTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    flex: 1,
-    textAlign: 'right',
-  },
-  postExcerpt: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'right',
-  },
-  postMetaContainer: {
-    alignItems: 'flex-start',
-    marginRight: 16,
-  },
-  postViewsContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  postViewsText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    marginRight: 4,
-  },
-  postDateText: {
-    fontSize: 10,
-    color: '#9ca3af',
-    marginTop: 4,
-  },
-});
 
 export default Home;
