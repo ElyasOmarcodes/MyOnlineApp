@@ -1,5 +1,5 @@
-import {StrictMode} from 'react';
-import {createRoot} from 'react-dom/client';
+import { StrictMode } from 'react';
+import { AppRegistry } from 'react-native';
 import App from './App.tsx';
 import './index.css';
 
@@ -8,8 +8,9 @@ window.onerror = (message, source, lineno, colno, error) => {
   console.error("Global Error:", message, "at", source, lineno, ":", colno, error);
 };
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+AppRegistry.registerComponent('App', () => App);
+
+AppRegistry.runApplication('App', {
+  initialProps: {},
+  rootTag: document.getElementById('root'),
+});

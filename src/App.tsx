@@ -26,6 +26,9 @@ import SplashAndRegister from './components/SplashAndRegister';
 import ProfileEdit from './pages/ProfileEdit';
 import Comments from './pages/Comments';
 
+import AdminUsers from './pages/AdminUsers';
+import AdminUserProfile from './pages/AdminUserProfile';
+
 function CapacitorHandler({ onExitRequest }: { onExitRequest: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,6 +106,8 @@ function AppContent() {
           <Route path="admin/posts" element={<AdminPosts />} />
           <Route path="admin/categories" element={<AdminCategories />} />
           <Route path="admin/top-posts" element={<AdminTopPosts />} />
+          <Route path="admin/users" element={<AdminUsers />} />
+          <Route path="admin/users/:id" element={<AdminUserProfile />} />
           <Route path="category/:id" element={<CategoryPage />} />
           <Route path="profile-edit" element={<ProfileEdit />} />
           <Route path="comments/:id" element={<Comments />} />

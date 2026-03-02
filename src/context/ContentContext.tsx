@@ -40,12 +40,15 @@ export interface User {
   name: string;
   phone: string;
   color: string;
+  badge?: string;
 }
 
 interface ContentContextType {
   currentUser: User | null;
+  users: User[];
   registerUser: (name: string, phone: string) => void;
   updateUser: (name: string, phone: string) => void;
+  updateUserBadge: (userId: string, badge: string) => Promise<void>;
   currentPost: Post | null;
   setCurrentPost: (post: Post | null) => void;
   posts: Post[];
@@ -67,6 +70,7 @@ interface ContentContextType {
   deleteCategory: (id: string, migrateToId?: string) => Promise<void>;
   topPosts: Post[];
   addTopPost: (title: string, content: string) => Promise<void>;
+  updateTopPost: (id: string, title: string, content: string) => Promise<void>;
   deleteTopPost: (id: string) => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
@@ -102,6 +106,15 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
   
+  const [users, setUsers] = useState<User[]>(() => {
+    try {
+      const saved = localStorage.getItem('cached_users');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   const [categories, setCategories] = useState<Category[]>(() => {
     try {
       const saved = localStorage.getItem('cached_categories');
@@ -260,10 +273,42 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error("Firebase categories error:", error);
     });
 
+    const usersRef = ref(db, 'users');
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
+      try {
+        const data = snapshot.val();
+        if (data) {
+          const usersList = Object.entries(data).map(([key, value]: [string, any]) => ({
+            id: key,
+            ...value,
+          }));
+          setUsers(usersList);
+          localStorage.setItem('cached_users', JSON.stringify(usersList));
+          
+          // Update current user if it exists in the fetched list
+          const savedUser = localStorage.getItem('app_user');
+          if (savedUser) {
+            const parsedSavedUser = JSON.parse(savedUser);
+            const updatedCurrentUser = usersList.find(u => u.id === parsedSavedUser.id);
+            if (updatedCurrentUser) {
+              setCurrentUser(updatedCurrentUser);
+              localStorage.setItem('app_user', JSON.stringify(updatedCurrentUser));
+            }
+          }
+        } else {
+          setUsers([]);
+          localStorage.setItem('cached_users', JSON.stringify([]));
+        }
+      } catch (err) {
+        console.error("Error parsing users:", err);
+      }
+    });
+
     return () => {
       unsubscribePosts();
       unsubscribeTopPosts();
       unsubscribeCategories();
+      unsubscribeUsers();
     };
   }, []);
 
@@ -285,6 +330,10 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     setCurrentUser(newUser);
     localStorage.setItem('app_user', JSON.stringify(newUser));
+    
+    // Save to Firebase
+    const userRef = ref(db, `users/${newUser.id}`);
+    set(userRef, newUser).catch(err => console.error("Failed to save user to Firebase", err));
   };
 
   const updateUser = (name: string, phone: string) => {
@@ -293,7 +342,16 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updatedUser = { ...currentUser, name, phone, color };
       setCurrentUser(updatedUser);
       localStorage.setItem('app_user', JSON.stringify(updatedUser));
+      
+      // Save to Firebase
+      const userRef = ref(db, `users/${currentUser.id}`);
+      update(userRef, { name, phone, color }).catch(err => console.error("Failed to update user in Firebase", err));
     }
+  };
+
+  const updateUserBadge = async (userId: string, badge: string) => {
+    const userRef = ref(db, `users/${userId}`);
+    await update(userRef, { badge });
   };
 
   const toggleFavorite = (id: string) => {
@@ -474,6 +532,14 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const updateTopPost = async (id: string, title: string, content: string) => {
+    const topRef = ref(db, `topPosts/${id}`);
+    await update(topRef, {
+      title,
+      content
+    });
+  };
+
   const deleteTopPost = async (id: string) => {
     await remove(ref(db, `topPosts/${id}`));
   };
@@ -494,8 +560,10 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const value = React.useMemo(() => ({ 
     currentUser,
+    users,
     registerUser,
     updateUser,
+    updateUserBadge,
     currentPost, 
     setCurrentPost, 
     posts, 
@@ -517,6 +585,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     deleteCategory,
     topPosts,
     addTopPost,
+    updateTopPost,
     deleteTopPost,
     loading,
     isAdmin,
@@ -524,7 +593,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     logout,
     checkNetwork
   }), [
-    currentUser, currentPost, posts, favorites, categories, topPosts, loading, isAdmin
+    currentUser, users, currentPost, posts, favorites, categories, topPosts, loading, isAdmin
   ]);
 
   return (

@@ -75,11 +75,11 @@ const Admin: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-4">
         <AdminCard 
-          title="مطالب مدیریت" 
-          desc={`${posts.length} خپاره شوي مطالب`} 
-          icon={FileText} 
-          color="#3b82f6"
-          onClick={() => navigate('/admin/posts')} 
+          title="کارونکي" 
+          desc="د کارونکو مدیریت" 
+          icon={Users} 
+          color="#8b5cf6"
+          onClick={() => navigate('/admin/users')} 
         />
         <AdminCard 
           title="کټګورۍ مدیریت" 
@@ -97,14 +97,7 @@ const Admin: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-[32px] border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col items-center text-center space-y-2">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-500 flex items-center justify-center">
-            <Users size={20} />
-          </div>
-          <span className="text-[10px] font-black text-zinc-400 uppercase">کارونکي</span>
-          <span className="text-lg font-black">---</span>
-        </div>
+      <div className="grid grid-cols-1 gap-4">
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-[32px] border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col items-center text-center space-y-2">
           <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center">
             <ShieldCheck size={20} />

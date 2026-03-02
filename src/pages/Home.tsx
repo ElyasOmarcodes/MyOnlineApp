@@ -27,10 +27,22 @@ const Home: React.FC = () => {
     if (topPosts && topPosts.length > 1) {
       const timer = setInterval(() => {
         setCurrentTopIndex(prev => (prev + 1) % topPosts.length);
-      }, 5000);
+      }, 20000);
       return () => clearInterval(timer);
     }
   }, [topPosts]);
+
+  const handleDragEnd = (event: any, info: any) => {
+    if (!topPosts || topPosts.length <= 1) return;
+    const swipeThreshold = 50;
+    if (info.offset.x > swipeThreshold) {
+      // Swipe right (previous)
+      setCurrentTopIndex(prev => (prev - 1 + topPosts.length) % topPosts.length);
+    } else if (info.offset.x < -swipeThreshold) {
+      // Swipe left (next)
+      setCurrentTopIndex(prev => (prev + 1) % topPosts.length);
+    }
+  };
 
   const handleView = (post: Post) => {
     incrementViews(post.id);
@@ -81,8 +93,11 @@ const Home: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.5, ease: "easeInOut" }}
-              onClick={() => handleView(topPosts[currentTopIndex])}
-              className="absolute inset-0 cursor-pointer overflow-hidden rounded-[32px] sm:rounded-[40px] bg-[var(--accent-color)] p-6 sm:p-8 text-white shadow-xl shadow-[var(--accent-color)]/20 flex flex-col justify-between"
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              onDragEnd={handleDragEnd}
+              className="absolute inset-0 overflow-hidden rounded-[32px] sm:rounded-[40px] bg-[var(--accent-color)] p-6 sm:p-8 text-white shadow-xl shadow-[var(--accent-color)]/20 flex flex-col justify-between cursor-grab active:cursor-grabbing"
             >
               <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                 <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">

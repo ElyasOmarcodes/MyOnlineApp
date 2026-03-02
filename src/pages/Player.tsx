@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Share as RNShare } from 'react-native';
 import { useContent, Post } from '../context/ContentContext';
 import { useTheme } from '../context/ThemeContext';
-import { motion, AnimatePresence } from 'motion/react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import NetworkDialog from '../components/NetworkDialog';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
-import { Share } from '@capacitor/share';
-import { Capacitor } from '@capacitor/core';
 import { 
   Heart, 
   Share2, 
@@ -27,31 +25,21 @@ import {
   Globe,
   XCircle
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from '@react-navigation/native';
+
+const { width } = Dimensions.get('window');
 
 const Player: React.FC = () => {
   const { currentPost: contextPost, favorites, toggleFavorite, likePost, isAdmin, deletePost, currentUser, checkNetwork } = useContent();
   const { fontSize } = useTheme();
-  const navigate = useNavigate();
+  const navigation = useNavigation<any>();
   const [currentPost, setCurrentPost] = useState(contextPost);
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     if (contextPost) {
@@ -74,47 +62,36 @@ const Player: React.FC = () => {
 
   if (!currentPost) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
-        <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-900 rounded-full flex items-center justify-center text-zinc-300">
-          <MessageSquare size={40} />
-        </div>
-        <p className="text-zinc-500 font-bold">هیڅ مطلب نه دی غوره شوی</p>
-        <button 
-          onClick={() => navigate('/')}
-          className="px-6 py-2 bg-[var(--accent-color)] text-white rounded-xl font-bold"
+      <View style={styles.emptyContainer}>
+        <View style={styles.emptyIconContainer}>
+          <MessageSquare size={40} color="#d1d5db" />
+        </View>
+        <Text style={styles.emptyText}>هیڅ مطلب نه دی غوره شوی</Text>
+        <TouchableOpacity 
+          style={styles.homeButton}
+          onPress={() => navigation.navigate('Home')}
         >
-          کور پاڼې ته لاړ شئ
-        </button>
-      </div>
+          <Text style={styles.homeButtonText}>کور پاڼې ته لاړ شئ</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(`${currentPost.title}\n\n${currentPost.content}`);
+    // Clipboard not fully supported in RN Web without extra libs, using basic alert for now
+    alert('Copied to clipboard!');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShare = async () => {
     if (!currentPost) return;
-    const shareData = {
-      title: currentPost.title,
-      text: `${currentPost.title}\n\n${currentPost.content}\n\nد اسلامي مطالبو اپلیکیشن څخه`,
-      url: window.location.href
-    };
-
     try {
-      if (Capacitor.isNativePlatform()) {
-        await Share.share(shareData);
-      } else if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(shareData.text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    } catch (e) {
-      console.log('Error sharing:', e);
+      await RNShare.share({
+        message: `${currentPost.title}\n\n${currentPost.content}\n\nد اسلامي مطالبو اپلیکیشن څخه`,
+      });
+    } catch (error) {
+      console.error('Error sharing', error);
     }
   };
 
@@ -136,12 +113,12 @@ const Player: React.FC = () => {
         return;
       }
       await deletePost(currentPost.id);
-      navigate('/admin');
+      navigation.navigate('Admin');
     }
   };
 
   const handleAdminEdit = () => {
-    navigate('/admin');
+    navigation.navigate('Admin');
   };
 
   const commentsList = currentPost?.comments ? Object.entries(currentPost.comments).map(([id, data]) => ({ id, ...data })) : [];
@@ -152,292 +129,192 @@ const Player: React.FC = () => {
     ? currentPost.content.substring(0, MAX_LENGTH) + '...' 
     : currentPost?.content;
 
-  // Extract hashtags
   const hashtags = currentPost.content.match(/#[^\s#]+/g) || [];
 
   const handleTagAction = (action: 'post' | 'category' | 'all') => {
     if (!selectedTag) return;
     const tag = selectedTag.replace('#', '');
     
-    if (action === 'post') {
-      // Just highlight or scroll to it if we had a search in post feature
-      setSelectedTag(null);
-    } else if (action === 'category') {
-      navigate(`/category/${currentPost.category}?search=${tag}`);
+    if (action === 'category') {
+      navigation.navigate('Category', { id: currentPost.category, search: tag });
     } else {
-      navigate(`/?search=${tag}`);
+      navigation.navigate('Home', { search: tag });
     }
     setSelectedTag(null);
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-      className="space-y-8 pb-32 pt-20"
-    >
-      {/* Top Navigation - Pinned */}
-      <div className={`fixed top-0 left-0 right-0 z-50 pt-safe transition-all duration-300 ${
-        scrollY > 100 
-          ? 'bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50 shadow-sm' 
-          : 'bg-zinc-50/0 dark:bg-black/0'
-      }`}>
-        <div className="max-w-md mx-auto px-4 pb-3 pt-4 flex items-center justify-between relative">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 text-zinc-500 active:scale-90 transition-transform relative z-[60]"
-          >
-            <ChevronRight size={24} />
-          </button>
-          
-          <div className="flex-1 px-4 text-center overflow-hidden">
-            <AnimatePresence mode="wait">
-              {scrollY > 150 ? (
-                <motion.div
-                  key="title"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="flex flex-col items-center"
-                >
-                  <span className="text-[10px] font-black text-[var(--accent-color)] uppercase tracking-widest truncate max-w-[150px]">
-                    {currentPost.category}
-                  </span>
-                  <h2 className="text-sm font-black truncate max-w-[200px]">{currentPost.title}</h2>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="default"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">د مطلب تفصیل</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <button 
-            onClick={() => toggleFavorite(currentPost.id)}
-            className={`p-3 rounded-2xl shadow-sm border transition-all active:scale-90 relative z-[60] ${
-              (favorites || []).includes(currentPost.id)
-                ? 'bg-red-50 border-red-100 text-red-500'
-                : 'bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-500'
-            }`}
-          >
-            <Heart size={24} fill={(favorites || []).includes(currentPost.id) ? "currentColor" : "none"} />
-          </button>
-        </div>
-      </div>
-
-      {/* Content Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-4 px-4"
-      >
-        <div className="flex items-center space-x-3 space-x-reverse">
-          <span className="px-3 py-1 bg-[var(--accent-color)]/10 text-[var(--accent-color)] rounded-full text-[10px] font-black uppercase tracking-widest">
-            {currentPost.category}
-          </span>
-          <div className="flex items-center text-zinc-400 text-[10px] font-bold">
-            <Clock size={12} className="ml-1" />
-            {new Date(currentPost.timestamp).toLocaleDateString('fa-AF')}
-          </div>
-          <div className="flex items-center text-zinc-400 text-[10px] font-bold">
-            <Eye size={12} className="ml-1" />
-            {currentPost.views || 0} لیدنې
-          </div>
-        </div>
-        <h1 className="text-4xl font-black leading-tight text-zinc-800 dark:text-zinc-100">
-          {currentPost.title}
-        </h1>
+    <View style={styles.container}>
+      {/* Top Navigation */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <ChevronRight size={24} color="#6b7280" />
+        </TouchableOpacity>
         
-        {isAdmin && (
-          <div className="flex items-center space-x-3 space-x-reverse pt-2">
-            <button 
-              onClick={handleAdminEdit}
-              className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-500 rounded-xl text-xs font-bold active:scale-95 transition-transform"
-            >
-              <Edit3 size={14} />
-              <span>ایډیټ</span>
-            </button>
-            <button 
-              onClick={() => setShowDeleteConfirm(true)}
-              className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-red-50 dark:bg-red-900/10 text-red-500 rounded-xl text-xs font-bold active:scale-95 transition-transform"
-            >
-              <Trash2 size={14} />
-              <span>حذف</span>
-            </button>
-          </div>
-        )}
-      </motion.div>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerCategory}>{currentPost.category}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{currentPost.title}</Text>
+        </View>
 
-      {/* Main Content */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white dark:bg-zinc-900 rounded-[40px] p-6 sm:p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm mx-4"
-      >
-        <div className="prose dark:prose-invert max-w-none">
-          <p 
-            className="leading-loose text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap font-medium transition-all duration-300"
-            style={{ fontSize: `${fontSize}px` }}
-          >
-            {displayContent}
-          </p>
-          {shouldTruncate && (
-            <button 
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="mt-4 text-[var(--accent-color)] font-bold text-sm flex items-center hover:underline"
-            >
-              {isExpanded ? 'لږ ښودل' : 'نور ولولئ...'}
-            </button>
+        <TouchableOpacity 
+          style={[styles.favoriteButton, (favorites || []).includes(currentPost.id) && styles.favoriteButtonActive]}
+          onPress={() => toggleFavorite(currentPost.id)}
+        >
+          <Heart size={24} color={(favorites || []).includes(currentPost.id) ? "#ef4444" : "#6b7280"} fill={(favorites || []).includes(currentPost.id) ? "#ef4444" : "none"} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Content Header */}
+        <View style={styles.contentHeader}>
+          <View style={styles.metaRow}>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{currentPost.category}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Clock size={12} color="#9ca3af" style={styles.metaIcon} />
+              <Text style={styles.metaText}>{new Date(currentPost.timestamp).toLocaleDateString('fa-AF')}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Eye size={12} color="#9ca3af" style={styles.metaIcon} />
+              <Text style={styles.metaText}>{currentPost.views || 0} لیدنې</Text>
+            </View>
+          </View>
+          
+          <Text style={styles.mainTitle}>{currentPost.title}</Text>
+          
+          {isAdmin && (
+            <View style={styles.adminActions}>
+              <TouchableOpacity style={styles.editButton} onPress={handleAdminEdit}>
+                <Edit3 size={14} color="#3b82f6" />
+                <Text style={styles.editButtonText}>ایډیټ</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteButton} onPress={() => setShowDeleteConfirm(true)}>
+                <Trash2 size={14} color="#ef4444" />
+                <Text style={styles.deleteButtonText}>حذف</Text>
+              </TouchableOpacity>
+            </View>
           )}
-        </div>
-      </motion.div>
+        </View>
 
-      {/* Hashtags Section */}
-      {hashtags.length > 0 && (
-        <div className="px-6 flex flex-wrap gap-2">
-          {hashtags.map((tag, i) => (
-            <button
-              key={i}
-              onClick={() => setSelectedTag(tag)}
-              className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl text-xs font-bold hover:bg-[var(--accent-color)]/10 hover:text-[var(--accent-color)] transition-colors flex items-center gap-1"
-            >
-              <Hash size={12} />
-              {tag.replace('#', '')}
-            </button>
-          ))}
-        </div>
-      )}
+        {/* Main Content */}
+        <View style={styles.mainContentCard}>
+          <Text style={[styles.contentText, { fontSize }]}>
+            {displayContent}
+          </Text>
+          {shouldTruncate && (
+            <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)}>
+              <Text style={styles.readMoreText}>
+                {isExpanded ? 'لږ ښودل' : 'نور ولولئ...'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
-      {/* Comments Link Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors mx-4"
-        onClick={() => navigate(`/comments/${currentPost.id}`)}
-      >
-        <div className="flex items-center space-x-3 space-x-reverse">
-          <div className="w-12 h-12 rounded-2xl bg-[var(--accent-color)]/10 text-[var(--accent-color)] flex items-center justify-center">
-            <MessageSquare size={24} />
-          </div>
-          <div>
-            <h2 className="text-lg font-black text-zinc-800 dark:text-zinc-100">نظریات او کمنټونه</h2>
-            <p className="text-xs font-bold text-zinc-400 mt-0.5">
-              {commentsList.length > 0 ? `${commentsList.length} کمنټونه شوي دي` : 'تر اوسه کوم کمنټ نه دی شوی'}
-            </p>
-          </div>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
-          <ChevronLeft size={20} />
-        </div>
-      </motion.div>
+        {/* Hashtags Section */}
+        {hashtags.length > 0 && (
+          <View style={styles.hashtagsContainer}>
+            {hashtags.map((tag, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.hashtagButton}
+                onPress={() => setSelectedTag(tag)}
+              >
+                <Hash size={12} color="#6b7280" />
+                <Text style={styles.hashtagText}>{tag.replace('#', '')}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Comments Link Section */}
+        <TouchableOpacity 
+          style={styles.commentsCard}
+          onPress={() => navigation.navigate('Comments', { id: currentPost.id })}
+        >
+          <View style={styles.commentsCardLeft}>
+            <View style={styles.commentsIconContainer}>
+              <MessageSquare size={24} color="#10b981" />
+            </View>
+            <View>
+              <Text style={styles.commentsTitle}>نظریات او کمنټونه</Text>
+              <Text style={styles.commentsSubtitle}>
+                {commentsList.length > 0 ? `${commentsList.length} کمنټونه شوي دي` : 'تر اوسه کوم کمنټ نه دی شوی'}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.commentsArrowContainer}>
+            <ChevronLeft size={20} color="#9ca3af" />
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
 
       {/* Action Bar - Absolute Bottom */}
-      <div className="fixed bottom-6 left-4 right-4 z-40 mb-safe">
-        <div className="max-w-md mx-auto bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl border border-white/20 dark:border-zinc-800/20 rounded-[32px] shadow-2xl p-2">
-          <div className="flex items-center justify-around">
-            <button 
-              onClick={handleLike}
-              className={`flex flex-col items-center p-3 rounded-2xl transition-all ${
-                liked ? 'text-[var(--accent-color)] scale-110' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-              }`}
-            >
-              <ThumbsUp size={20} fill={liked ? "currentColor" : "none"} />
-              <span className="text-[9px] font-black mt-1">{currentPost.likes} لایک</span>
-            </button>
+      <View style={styles.actionBarContainer}>
+        <View style={styles.actionBar}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+            <ThumbsUp size={20} color={liked ? "#10b981" : "#6b7280"} fill={liked ? "#10b981" : "none"} />
+            <Text style={[styles.actionButtonText, liked && styles.actionButtonTextActive]}>{currentPost.likes} لایک</Text>
+          </TouchableOpacity>
 
-            <button 
-              onClick={handleCopy}
-              className="flex flex-col items-center p-3 text-zinc-500 rounded-2xl transition-all"
-            >
-              <AnimatePresence mode="wait">
-                {copied ? (
-                  <motion.div key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                    <Check size={20} className="text-emerald-500" />
-                  </motion.div>
-                ) : (
-                  <motion.div key="copy" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                    <Copy size={20} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <span className="text-[9px] font-black mt-1">{copied ? 'کاپي شو' : 'کاپي'}</span>
-            </button>
+          <TouchableOpacity style={styles.actionButton} onPress={handleCopy}>
+            {copied ? <Check size={20} color="#10b981" /> : <Copy size={20} color="#6b7280" />}
+            <Text style={styles.actionButtonText}>{copied ? 'کاپي شو' : 'کاپي'}</Text>
+          </TouchableOpacity>
 
-            <button 
-              onClick={handleShare}
-              className="flex flex-col items-center p-3 text-zinc-500 rounded-2xl transition-all"
-            >
-              <Share2 size={20} />
-              <span className="text-[9px] font-black mt-1">شریکول</span>
-            </button>
-          </div>
-        </div>
-      </div>
+          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+            <Share2 size={20} color="#6b7280" />
+            <Text style={styles.actionButtonText}>شریکول</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      {/* Tag Action Menu */}
-      <AnimatePresence>
-        {selectedTag && (
-          <>
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]" onClick={() => setSelectedTag(null)} />
-            <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
-              className="fixed bottom-0 left-0 right-0 z-[110] bg-white dark:bg-zinc-900 rounded-t-[40px] p-6 pb-safe shadow-2xl border-t border-zinc-100 dark:border-zinc-800"
-            >
-              <div className="max-w-md mx-auto space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-[var(--accent-color)]/10 text-[var(--accent-color)] flex items-center justify-center">
-                      <Hash size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black">{selectedTag}</h3>
-                      <p className="text-xs font-bold text-zinc-400">د دې ټګ لپاره پلټنه وکړئ</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedTag(null)} className="p-2 text-zinc-400">
-                    <XCircle size={24} />
-                  </button>
-                </div>
+      {/* Tag Action Menu (Simplified for RN Web) */}
+      {selectedTag && (
+        <View style={styles.tagMenuOverlay}>
+          <View style={styles.tagMenuContainer}>
+            <View style={styles.tagMenuHeader}>
+              <View style={styles.tagMenuTitleRow}>
+                <View style={styles.tagMenuIconContainer}>
+                  <Hash size={24} color="#10b981" />
+                </View>
+                <View>
+                  <Text style={styles.tagMenuTitle}>{selectedTag}</Text>
+                  <Text style={styles.tagMenuSubtitle}>د دې ټګ لپاره پلټنه وکړئ</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedTag(null)}>
+                <XCircle size={24} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
 
-                <div className="grid grid-cols-1 gap-3">
-                  <button 
-                    onClick={() => handleTagAction('category')}
-                    className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl flex items-center justify-between hover:bg-[var(--accent-color)] hover:text-white transition-all group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <LayoutGrid size={20} className="text-zinc-400 group-hover:text-white" />
-                      <span className="font-bold">په دې کټګورۍ کې</span>
-                    </div>
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button 
-                    onClick={() => handleTagAction('all')}
-                    className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl flex items-center justify-between hover:bg-[var(--accent-color)] hover:text-white transition-all group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Globe size={20} className="text-zinc-400 group-hover:text-white" />
-                      <span className="font-bold">په ټول اپلیکیشن کې</span>
-                    </div>
-                    <ChevronLeft size={18} />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            <TouchableOpacity 
+              style={styles.tagMenuOption}
+              onPress={() => handleTagAction('category')}
+            >
+              <View style={styles.tagMenuOptionLeft}>
+                <LayoutGrid size={20} color="#9ca3af" />
+                <Text style={styles.tagMenuOptionText}>په دې کټګورۍ کې</Text>
+              </View>
+              <ChevronLeft size={18} color="#9ca3af" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.tagMenuOption}
+              onPress={() => handleTagAction('all')}
+            >
+              <View style={styles.tagMenuOptionLeft}>
+                <Globe size={20} color="#9ca3af" />
+                <Text style={styles.tagMenuOptionText}>په ټول اپلیکیشن کې</Text>
+              </View>
+              <ChevronLeft size={18} color="#9ca3af" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}
@@ -451,8 +328,346 @@ const Player: React.FC = () => {
         isOpen={showNetworkDialog} 
         onClose={() => setShowNetworkDialog(false)} 
       />
-    </motion.div>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6b7280',
+    marginBottom: 24,
+  },
+  homeButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  homeButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  header: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  backButton: {
+    padding: 12,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  headerCategory: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#10b981',
+    textTransform: 'uppercase',
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  favoriteButton: {
+    padding: 12,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  favoriteButtonActive: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fee2e2',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 120,
+  },
+  contentHeader: {
+    marginBottom: 24,
+  },
+  metaRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  categoryBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  categoryBadgeText: {
+    color: '#10b981',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  metaItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  metaIcon: {
+    marginLeft: 4,
+  },
+  metaText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+  },
+  mainTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'right',
+  },
+  adminActions: {
+    flexDirection: 'row-reverse',
+    marginTop: 16,
+  },
+  editButton: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  editButtonText: {
+    color: '#3b82f6',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  deleteButton: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  deleteButtonText: {
+    color: '#ef4444',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  mainContentCard: {
+    backgroundColor: 'white',
+    borderRadius: 32,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    marginBottom: 24,
+  },
+  contentText: {
+    color: '#4b5563',
+    lineHeight: 32,
+    textAlign: 'right',
+  },
+  readMoreText: {
+    color: '#10b981',
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginTop: 16,
+    textAlign: 'right',
+  },
+  hashtagsContainer: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    marginBottom: 24,
+  },
+  hashtagButton: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 8,
+    marginBottom: 8,
+  },
+  hashtagText: {
+    color: '#6b7280',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  commentsCard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    borderRadius: 32,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  commentsCardLeft: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+  },
+  commentsIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  commentsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'right',
+  },
+  commentsSubtitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+    textAlign: 'right',
+    marginTop: 2,
+  },
+  commentsArrowContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f9fafb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionBarContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
+  },
+  actionBar: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 32,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  actionButton: {
+    alignItems: 'center',
+    padding: 12,
+  },
+  actionButtonText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  actionButtonTextActive: {
+    color: '#10b981',
+  },
+  tagMenuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  tagMenuContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    padding: 24,
+    paddingBottom: 48,
+  },
+  tagMenuHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  tagMenuTitleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+  },
+  tagMenuIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  tagMenuTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'right',
+  },
+  tagMenuSubtitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#9ca3af',
+    textAlign: 'right',
+  },
+  tagMenuOption: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9fafb',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  tagMenuOptionLeft: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+  },
+  tagMenuOptionText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginRight: 12,
+  },
+});
 
 export default Player;

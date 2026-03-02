@@ -12,27 +12,21 @@
 }
 
 @layer base {
-  html, body {
+  html {
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior-y: none; /* د پاڼې د اضافي کش کېدو (Overscroll) مخنیوی */
-  }
-  
-  /* د ټولو شیانو د سلیکشن مخنیوی */
-  * {
-    -webkit-user-select: none; /* Safari لپاره */
-    -ms-user-select: none; /* IE 10+ او Edge لپاره */
-    user-select: none; /* معیاري ترکیب */
-  }
-
-  /* په انپوټ (Input) او ټیکسټ ایریا (Textarea) کې د لیکلو او ایډیټ لپاره سلیکشن ته اجازه */
-  input, textarea {
-    -webkit-user-select: auto;
-    -ms-user-select: auto;
-    user-select: auto;
+    overscroll-behavior: none;
   }
   
   body {
     @apply bg-zinc-50 dark:bg-black transition-colors duration-300;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: none;
+  }
+
+  input, textarea {
+    user-select: auto;
+    -webkit-user-select: auto;
   }
 }
 

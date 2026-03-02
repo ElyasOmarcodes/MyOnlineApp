@@ -7,39 +7,56 @@ import {
   Trash2, 
   AlertCircle, 
   CheckCircle2, 
-  Search,
-  ChevronLeft,
   Calendar,
-  FileText
+  Edit2,
+  X
 } from 'lucide-react';
-import { useContent } from '../context/ContentContext';
+import { useContent, Post } from '../context/ContentContext';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const AdminTopPosts: React.FC = () => {
   const navigate = useNavigate();
-  const { topPosts, addTopPost, deleteTopPost, posts, isAdmin } = useContent();
+  const { topPosts, addTopPost, updateTopPost, deleteTopPost, isAdmin } = useContent();
   
-  const [searchQuery, setSearchQuery] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const [formData, setFormData] = useState({ title: '', content: '' });
 
   if (!isAdmin) return null;
 
-  const filteredPosts = posts.filter(post => 
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    !topPosts.some(tp => tp.id === post.id)
-  );
+  const handleSave = async () => {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      setError('مهرباني وکړئ ټول اړین معلومات ډک کړئ');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
 
-  const handleAdd = async (post: any) => {
     try {
-      await addTopPost(post.title, post.content);
-      setSuccess('مطلب په غوره لیست کې اضافه شو');
+      if (editingId) {
+        await updateTopPost(editingId, formData.title, formData.content);
+        setSuccess('مطلب په بریالیتوب سره بدل شو');
+      } else {
+        await addTopPost(formData.title, formData.content);
+        setSuccess('مطلب په غوره لیست کې اضافه شو');
+      }
       setTimeout(() => setSuccess(''), 3000);
+      resetForm();
     } catch (err) {
       setError('تېروتنه رامنځته شوه');
+      setTimeout(() => setError(''), 3000);
     }
+  };
+
+  const handleEdit = (post: Post) => {
+    setFormData({ title: post.title, content: post.content });
+    setEditingId(post.id);
+    setIsEditing(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteConfirm = async () => {
@@ -50,9 +67,16 @@ const AdminTopPosts: React.FC = () => {
         setTimeout(() => setSuccess(''), 3000);
       } catch (err) {
         setError('تېروتنه رامنځته شوه');
+        setTimeout(() => setError(''), 3000);
       }
       setPostToDelete(null);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({ title: '', content: '' });
+    setEditingId(null);
+    setIsEditing(false);
   };
 
   return (
@@ -63,6 +87,51 @@ const AdminTopPosts: React.FC = () => {
         </button>
         <h1 className="text-2xl font-black">بهترینې خبرې مدیریت</h1>
       </header>
+
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-[32px] border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-black">{isEditing ? 'د مطلب سمون' : 'نوی مطلب اضافه کول'}</h2>
+          {isEditing && (
+            <button onClick={resetForm} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+              <X size={20} />
+            </button>
+          )}
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-zinc-500 mb-2">عنوان</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="د مطلب عنوان..."
+              className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] font-bold"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-zinc-500 mb-2">متن</label>
+            <textarea
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              placeholder="د مطلب بشپړ متن..."
+              rows={4}
+              className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] resize-none"
+            />
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={topPosts.length >= 10 && !isEditing}
+            className="w-full bg-[var(--accent-color)] text-white p-4 rounded-2xl font-bold flex items-center justify-center space-x-2 space-x-reverse disabled:opacity-50"
+          >
+            {isEditing ? <Edit2 size={20} /> : <PlusCircle size={20} />}
+            <span>{isEditing ? 'بدلونونه خوندي کړئ' : 'اضافه کړئ'}</span>
+          </button>
+          {topPosts.length >= 10 && !isEditing && (
+            <p className="text-xs text-amber-500 text-center font-bold">تاسو یوازې ۱۰ غوره مطالب اضافه کولی شئ. مهرباني وکړئ لومړی یو حذف کړئ.</p>
+          )}
+        </div>
+      </div>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2">
@@ -87,12 +156,20 @@ const AdminTopPosts: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setPostToDelete(post.id)}
-                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-              >
-                <Trash2 size={18} />
-              </button>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <button
+                  onClick={() => handleEdit(post)}
+                  className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
+                >
+                  <Edit2 size={18} />
+                </button>
+                <button
+                  onClick={() => setPostToDelete(post.id)}
+                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
             </motion.div>
           ))}
           {topPosts.length === 0 && (
@@ -104,48 +181,10 @@ const AdminTopPosts: React.FC = () => {
         </div>
       </div>
 
-      <div className="space-y-4 pt-4">
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-sm font-black text-zinc-400 uppercase tracking-widest">د مطالبو انتخاب</h2>
-        </div>
-
-        <div className="relative">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="د مطلب پلټنه..."
-            className="w-full bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl py-4 pr-12 pl-6 focus:outline-none focus:ring-4 focus:ring-[var(--accent-color)]/10 font-bold shadow-sm"
-          />
-        </div>
-
-        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-          {filteredPosts.map((post) => (
-            <button
-              key={post.id}
-              onClick={() => handleAdd(post)}
-              className="w-full bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 flex items-center justify-between hover:border-[var(--accent-color)] transition-all group"
-            >
-              <div className="flex-1 min-w-0 text-right ml-4">
-                <h4 className="font-bold text-sm text-zinc-700 dark:text-zinc-200 truncate">{post.title}</h4>
-                <p className="text-[10px] text-zinc-400 mt-0.5">{post.category}</p>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-300 group-hover:bg-[var(--accent-color)] group-hover:text-white transition-colors">
-                <PlusCircle size={16} />
-              </div>
-            </button>
-          ))}
-          {filteredPosts.length === 0 && searchQuery && (
-            <p className="text-center py-6 text-zinc-400 text-xs">هیڅ مطلب ونه موندل شو</p>
-          )}
-        </div>
-      </div>
-
       <ConfirmDialog
         isOpen={!!postToDelete}
         title="له غوره لیست څخه حذف"
-        message="ایا غواړئ دا مطلب له غوره لیست څخه حذف کړئ؟ (اصلي مطلب به پاتې وي)"
+        message="ایا غواړئ دا مطلب له غوره لیست څخه حذف کړئ؟"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setPostToDelete(null)}
       />
