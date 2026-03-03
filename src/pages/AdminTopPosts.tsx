@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useContent, Post } from '../context/ContentContext';
 import { motion, AnimatePresence } from 'motion/react';
-import ConfirmDialog from '../components/ConfirmDialog';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const AdminTopPosts: React.FC = () => {
   const navigate = useNavigate();

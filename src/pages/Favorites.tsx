@@ -1,268 +1,99 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useContent, Post } from '../context/ContentContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigate } from 'react-router-dom';
 import { Heart, HeartOff, ChevronLeft, MessageSquare, Trash2 } from 'lucide-react';
 
 const Favorites: React.FC = () => {
   const { posts, favorites, toggleFavorite, setCurrentPost, incrementViews } = useContent();
-  const navigation = useNavigation<any>();
+  const navigate = useNavigate();
 
   const favoritePosts = posts.filter(p => (favorites || []).includes(p.id));
 
   const handleView = (post: Post) => {
     incrementViews(post.id);
     setCurrentPost(post);
-    navigation.navigate('Player');
+    navigate('/player');
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <View style={styles.headerBackground}>
-          <Heart size={120} color="rgba(255,255,255,0.2)" fill="rgba(255,255,255,0.2)" style={styles.headerBgIcon} />
-        </View>
-        
-        <View style={styles.headerContent}>
-          <View style={styles.headerBadge}>
-            <Heart size={16} color="white" fill="white" />
-            <Text style={styles.headerBadgeText}>ستاسو خوښ شوي</Text>
-          </View>
-          <Text style={styles.headerTitle}>خوښ شوي مطالب</Text>
-          <Text style={styles.headerSubtitle}>
-            دلته ستاسو د خوښې وړ لیکنو او مطالبو ټولګه ده.
-          </Text>
-        </View>
-      </View>
+    <div className="flex-1 bg-zinc-50 dark:bg-black min-h-screen pb-24" dir="rtl">
+      <div className="p-4">
+        <div className="bg-red-500 rounded-[32px] p-6 mb-6 relative overflow-hidden">
+          <div className="absolute -bottom-5 -left-5 opacity-50 transform rotate-12">
+            <Heart size={120} className="text-white/20" fill="currentColor" />
+          </div>
+          
+          <div className="relative z-10 flex flex-col items-end">
+            <div className="flex items-center flex-row-reverse bg-white/20 px-2 py-1 rounded-lg mb-3">
+              <Heart size={16} className="text-white" fill="white" />
+              <span className="text-white text-xs font-bold mr-1">ستاسو خوښ شوي</span>
+            </div>
+            <h1 className="text-white text-2xl font-bold text-right mb-2">خوښ شوي مطالب</h1>
+            <p className="text-white/80 text-xs text-right">
+              دلته ستاسو د خوښې وړ لیکنو او مطالبو ټولګه ده.
+            </p>
+          </div>
+        </div>
 
-      {favoritePosts.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconWrapper}>
-            <View style={styles.emptyIconPulse} />
-            <View style={styles.emptyIconInner}>
-              <HeartOff size={48} color="#d1d5db" />
-            </View>
-          </View>
-          <View style={styles.emptyTextContainer}>
-            <Text style={styles.emptyTitle}>لیست خالي دی</Text>
-            <Text style={styles.emptySubtitle}>تاسو تر اوسه هیڅ مطلب نه دی خوښ کړی.</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.exploreButton}
-            onPress={() => navigation.navigate('Home')}
-          >
-            <Text style={styles.exploreButtonText}>مطالب وګورئ</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.listContainer}>
-          <View style={styles.listHeader}>
-            <Text style={styles.listCountText}>{favoritePosts.length} مطالب</Text>
-          </View>
-
-          {favoritePosts.map((post) => (
-            <TouchableOpacity
-              key={post.id}
-              style={styles.postCard}
-              onPress={() => handleView(post)}
+        {favoritePosts.length === 0 ? (
+          <div className="py-16 flex flex-col items-center">
+            <div className="w-32 h-32 mb-6 relative flex justify-center items-center">
+              <div className="absolute inset-0 bg-emerald-500/5 rounded-full animate-pulse" />
+              <div className="w-full h-full bg-white dark:bg-zinc-900 rounded-full border border-zinc-100 dark:border-zinc-800 flex justify-center items-center relative z-10">
+                <HeartOff size={48} className="text-zinc-300" />
+              </div>
+            </div>
+            <div className="flex flex-col items-center mb-6">
+              <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 mb-2">لیست خالي دی</h2>
+              <p className="text-sm text-zinc-500 text-center">تاسو تر اوسه هیڅ مطلب نه دی خوښ کړی.</p>
+            </div>
+            <button 
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-base px-8 py-3 rounded-2xl transition-colors"
+              onClick={() => navigate('/')}
             >
-              <View style={styles.postIconContainer}>
-                <MessageSquare size={24} color="#9ca3af" />
-              </View>
+              مطالب وګورئ
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-row-reverse justify-between px-2 mb-2">
+              <span className="text-xs font-bold text-zinc-400">{favoritePosts.length} مطالب</span>
+            </div>
 
-              <View style={styles.postContent}>
-                <Text style={styles.postTitle} numberOfLines={1}>{post.title}</Text>
-                <Text style={styles.postExcerpt} numberOfLines={1}>{post.content}</Text>
-              </View>
+            {favoritePosts.map((post) => (
+              <div
+                key={post.id}
+                className="flex flex-row-reverse items-center bg-white dark:bg-zinc-900 rounded-[32px] p-4 border border-zinc-100 dark:border-zinc-800 cursor-pointer hover:border-zinc-200 dark:hover:border-zinc-700 transition-colors"
+                onClick={() => handleView(post)}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-zinc-50 dark:bg-black flex justify-center items-center ml-4 shrink-0">
+                  <MessageSquare size={24} className="text-zinc-400" />
+                </div>
 
-              <View style={styles.postActions}>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => toggleFavorite(post.id)}
-                >
-                  <Trash2 size={18} color="#ef4444" />
-                </TouchableOpacity>
-                <ChevronLeft size={20} color="#d1d5db" />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </ScrollView>
+                <div className="flex-1 flex flex-col items-end overflow-hidden">
+                  <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-100 mb-1 truncate w-full text-right">{post.title}</h3>
+                  <p className="text-xs text-zinc-500 truncate w-full text-right">{post.content}</p>
+                </div>
+
+                <div className="flex flex-row-reverse items-center mr-4 shrink-0">
+                  <button
+                    className="p-3 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-2xl ml-2 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(post.id);
+                    }}
+                  >
+                    <Trash2 size={18} className="text-red-500" />
+                  </button>
+                  <ChevronLeft size={20} className="text-zinc-300" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  header: {
-    backgroundColor: '#ef4444',
-    borderRadius: 32,
-    padding: 24,
-    overflow: 'hidden',
-    marginBottom: 24,
-  },
-  headerBackground: {
-    position: 'absolute',
-    bottom: -20,
-    left: -20,
-    transform: [{ rotate: '12deg' }],
-  },
-  headerBgIcon: {
-    opacity: 0.5,
-  },
-  headerContent: {
-    zIndex: 10,
-  },
-  headerBadge: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-end',
-    marginBottom: 12,
-  },
-  headerBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginRight: 4,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'right',
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    textAlign: 'right',
-  },
-  emptyContainer: {
-    paddingVertical: 64,
-    alignItems: 'center',
-  },
-  emptyIconWrapper: {
-    width: 128,
-    height: 128,
-    marginBottom: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyIconPulse: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(16, 185, 129, 0.05)',
-    borderRadius: 64,
-  },
-  emptyIconInner: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'white',
-    borderRadius: 64,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyTextContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  exploreButton: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 16,
-  },
-  exploreButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  listContainer: {
-    gap: 16,
-  },
-  listHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    marginBottom: 8,
-  },
-  listCountText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-  },
-  postCard: {
-    flexDirection: 'row-reverse',
-    backgroundColor: 'white',
-    borderRadius: 32,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    alignItems: 'center',
-  },
-  postIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#f9fafb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 16,
-  },
-  postContent: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  postTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-    textAlign: 'right',
-  },
-  postExcerpt: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'right',
-  },
-  postActions: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  deleteButton: {
-    padding: 12,
-    backgroundColor: '#fef2f2',
-    borderRadius: 16,
-    marginLeft: 8,
-  },
-});
 
 export default Favorites;

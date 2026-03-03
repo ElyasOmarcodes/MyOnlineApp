@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, User, Phone, ArrowRight, Sparkles, Moon, Star } from 'lucide-react';
-import { useContent } from '../context/ContentContext';
+import { useContent } from '../src/context/ContentContext';
 
 const SplashAndRegister: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const { currentUser, registerUser } = useContent();

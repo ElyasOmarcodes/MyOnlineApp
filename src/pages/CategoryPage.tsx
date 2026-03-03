@@ -1,18 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import React, { useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useContent, Post } from '../context/ContentContext';
 import { ChevronRight, Search, Heart, MessageSquare, Eye, ChevronLeft, Filter, X } from 'lucide-react';
 
-type ParamList = {
-  Category: { id: string; search?: string };
-};
-
 const CategoryPage: React.FC = () => {
-  const route = useRoute<RouteProp<ParamList, 'Category'>>();
-  const navigation = useNavigation<any>();
-  const id = route.params?.id || 'all';
-  const initialSearch = route.params?.search || '';
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const initialSearch = new URLSearchParams(location.search).get('search') || '';
   
   const { posts, setCurrentPost, favorites, incrementViews } = useContent();
   const [searchQuery, setSearchQuery] = useState(initialSearch);
@@ -36,368 +31,139 @@ const CategoryPage: React.FC = () => {
   const handleView = (post: Post) => {
     incrementViews(post.id);
     setCurrentPost(post);
-    navigation.navigate('Player');
+    navigate('/player');
   };
 
   return (
-    <View style={styles.container}>
+    <div className="flex-1 bg-zinc-50 dark:bg-black min-h-screen pb-24" dir="rtl">
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
+      <div className="flex items-center flex-row-reverse px-4 py-3">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 ml-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
         >
-          <ChevronRight size={24} color="#717a8b" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{categoryName}</Text>
-      </View>
+          <ChevronRight size={24} className="text-zinc-500" />
+        </button>
+        <h1 className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">{categoryName}</h1>
+      </div>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputWrapper}>
-          <View style={styles.searchIconRight}>
-            <Search size={20} color="#9ca3af" />
-          </View>
-          <TextInput
-            style={styles.searchInput}
+      <div className="px-4 z-20 mb-4">
+        <div className="flex items-center flex-row-reverse bg-white dark:bg-zinc-900 border-2 border-zinc-50 dark:border-zinc-800 rounded-full py-1 shadow-sm">
+          <div className="px-4">
+            <Search size={20} className="text-zinc-400" />
+          </div>
+          <input
+            type="text"
+            className="flex-1 text-right text-base font-bold text-zinc-800 dark:text-zinc-100 py-3 bg-transparent focus:outline-none placeholder-zinc-400"
             placeholder="په دې کټګورۍ کې ولټوئ..."
-            placeholderTextColor="#9ca3af"
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <View style={styles.searchActionsLeft}>
+          <div className="flex items-center flex-row-reverse px-2">
             {searchQuery.length > 0 && (
-              <TouchableOpacity 
-                onPress={() => setSearchQuery('')}
-                style={styles.clearButton}
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="p-2"
               >
-                <View style={styles.clearIconBg}>
-                  <X size={12} color="#9ca3af" />
-                </View>
-              </TouchableOpacity>
+                <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex justify-center items-center hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+                  <X size={12} className="text-zinc-400" />
+                </div>
+              </button>
             )}
-            <View style={styles.filterContainer}>
-              <TouchableOpacity
-                onPress={() => setShowFilterMenu(!showFilterMenu)}
-                style={[
-                  styles.filterButton,
-                  (showFilterMenu || searchType !== 'both') && styles.filterButtonActive
-                ]}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                className={`p-2 rounded-xl transition-colors ${
+                  (showFilterMenu || searchType !== 'both') ? 'bg-[var(--accent-color)]/10' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
               >
-                <Filter size={20} color={(showFilterMenu || searchType !== 'both') ? 'var(--accent-color)' : '#9ca3af'} />
-              </TouchableOpacity>
+                <Filter size={20} className={(showFilterMenu || searchType !== 'both') ? 'text-[var(--accent-color)]' : 'text-zinc-400'} />
+              </button>
               
               {showFilterMenu && (
-                <View style={styles.filterMenu}>
-                  <Text style={styles.filterMenuTitle}>پلټنه په:</Text>
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-zinc-900 rounded-2xl p-2 border border-zinc-100 dark:border-zinc-800 shadow-xl z-50">
+                  <h3 className="text-[10px] font-bold text-zinc-400 uppercase px-3 py-2 text-right">پلټنه په:</h3>
                   {[
                     { id: 'both', label: 'ټول (عنوان او متن)' },
                     { id: 'title', label: 'یوازې عنوان کې' },
                     { id: 'content', label: 'یوازې متن کې' }
                   ].map(option => (
-                    <TouchableOpacity
+                    <button
                       key={option.id}
-                      onPress={() => {
+                      onClick={() => {
                         setSearchType(option.id as any);
                         setShowFilterMenu(false);
                       }}
-                      style={[
-                        styles.filterOption,
-                        searchType === option.id && styles.filterOptionActive
-                      ]}
+                      className={`w-full text-right px-3 py-2.5 rounded-xl transition-colors ${
+                        searchType === option.id ? 'bg-[var(--accent-color)]/10' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                      }`}
                     >
-                      <Text style={[
-                        styles.filterOptionText,
-                        searchType === option.id && styles.filterOptionTextActive
-                      ]}>
+                      <span className={`text-sm font-bold ${
+                        searchType === option.id ? 'text-[var(--accent-color)]' : 'text-zinc-600 dark:text-zinc-400'
+                      }`}>
                         {option.label}
-                      </Text>
-                    </TouchableOpacity>
+                      </span>
+                    </button>
                   ))}
-                </View>
+                </div>
               )}
-            </View>
-          </View>
-        </View>
-      </View>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Posts List */}
-      <ScrollView style={styles.listContainer} contentContainerStyle={styles.listContent}>
-        <View style={styles.listHeader}>
-          <Text style={styles.listCountText}>{filteredPosts.length} مطالب موندل شوي</Text>
-        </View>
+      <div className="px-4 pb-12">
+        <div className="flex flex-row-reverse justify-between items-center px-1 mb-4">
+          <span className="text-xs font-bold text-zinc-400">{filteredPosts.length} مطالب موندل شوي</span>
+        </div>
 
         {filteredPosts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>هیڅ مطلب ونه موندل شو</Text>
-          </View>
+          <div className="py-12 flex justify-center items-center">
+            <span className="text-base font-bold text-zinc-500">هیڅ مطلب ونه موندل شو</span>
+          </div>
         ) : (
-          <View style={styles.postsList}>
+          <div className="flex flex-col gap-3">
             {filteredPosts.map((post) => (
-              <TouchableOpacity
+              <button
                 key={post.id}
-                onPress={() => handleView(post)}
-                style={styles.postCard}
+                onClick={() => handleView(post)}
+                className="flex flex-row-reverse items-center bg-white dark:bg-zinc-900 rounded-3xl p-4 border border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 transition-colors text-right w-full"
               >
-                <View style={styles.postIconContainer}>
-                  <View style={styles.postIconBg}>
-                    <MessageSquare size={24} color="#9ca3af" />
-                  </View>
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-2xl bg-zinc-50 dark:bg-black flex justify-center items-center">
+                    <MessageSquare size={24} className="text-zinc-400" />
+                  </div>
                   {(favorites || []).includes(post.id) && (
-                    <View style={styles.favoriteBadge}>
-                      <Heart size={10} color="white" fill="white" />
-                    </View>
+                    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 border-2 border-white dark:border-zinc-900 flex justify-center items-center">
+                      <Heart size={10} className="text-white" fill="white" />
+                    </div>
                   )}
-                </View>
+                </div>
                 
-                <View style={styles.postTextContainer}>
-                  <Text style={styles.postTitle} numberOfLines={1}>{post.title}</Text>
-                  <Text style={styles.postPreview} numberOfLines={1}>{post.content}</Text>
-                </View>
+                <div className="flex-1 mr-4 flex flex-col items-end overflow-hidden">
+                  <h3 className="text-lg font-bold text-zinc-800 dark:text-zinc-100 mb-1 truncate w-full text-right">{post.title}</h3>
+                  <p className="text-xs text-zinc-500 truncate w-full text-right">{post.content}</p>
+                </div>
 
-                <View style={styles.postMetaContainer}>
-                  <View style={styles.viewsContainer}>
-                    <Eye size={12} color="#9ca3af" />
-                    <Text style={styles.viewsText}>{post.views || 0}</Text>
-                  </View>
-                  <ChevronLeft size={20} color="#d1d5db" />
-                  <Text style={styles.dateText}>
+                <div className="flex flex-col items-end gap-1 ml-2">
+                  <div className="flex flex-row-reverse items-center gap-1">
+                    <Eye size={12} className="text-zinc-400" />
+                    <span className="text-[10px] font-bold text-zinc-400">{post.views || 0}</span>
+                  </div>
+                  <ChevronLeft size={20} className="text-zinc-300" />
+                  <span className="text-[10px] text-zinc-400 font-mono">
                     {new Date(post.timestamp).toLocaleDateString('fa-AF')}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+                  </span>
+                </div>
+              </button>
             ))}
-          </View>
+          </div>
         )}
-      </ScrollView>
-    </View>
+      </div>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  header: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backButton: {
-    padding: 12,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    marginLeft: 16,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    zIndex: 20,
-    marginBottom: 16,
-  },
-  searchInputWrapper: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderWidth: 2,
-    borderColor: '#f9fafb',
-    borderRadius: 28,
-    paddingVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  searchIconRight: {
-    paddingHorizontal: 16,
-  },
-  searchInput: {
-    flex: 1,
-    textAlign: 'right',
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    paddingVertical: 12,
-  },
-  searchActionsLeft: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  clearButton: {
-    padding: 8,
-  },
-  clearIconBg: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filterContainer: {
-    position: 'relative',
-  },
-  filterButton: {
-    padding: 8,
-    borderRadius: 12,
-  },
-  filterButtonActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)', // Fallback accent
-  },
-  filterMenu: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    marginTop: 8,
-    width: 192,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 5,
-    zIndex: 50,
-  },
-  filterMenuTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    textAlign: 'right',
-  },
-  filterOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  filterOptionActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-  },
-  filterOptionText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#4b5563',
-    textAlign: 'right',
-  },
-  filterOptionTextActive: {
-    color: 'var(--accent-color)', // Fallback needed
-  },
-  listContainer: {
-    flex: 1,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 48,
-  },
-  listHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    marginBottom: 16,
-  },
-  listCountText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-  },
-  emptyState: {
-    paddingVertical: 48,
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#6b7280',
-  },
-  postsList: {
-    gap: 12,
-  },
-  postCard: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  postIconContainer: {
-    position: 'relative',
-  },
-  postIconBg: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#f9fafb',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  favoriteBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#ef4444',
-    borderWidth: 2,
-    borderColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  postTextContainer: {
-    flex: 1,
-    marginRight: 16,
-    alignItems: 'flex-end',
-  },
-  postTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-    textAlign: 'right',
-  },
-  postPreview: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'right',
-  },
-  postMetaContainer: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  viewsContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 4,
-  },
-  viewsText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-  },
-  dateText: {
-    fontSize: 10,
-    color: '#9ca3af',
-    fontFamily: 'monospace',
-  },
-});
 
 export default CategoryPage;

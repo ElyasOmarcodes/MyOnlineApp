@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigate } from 'react-router-dom';
 import { 
   PlusCircle, 
   FileText, 
@@ -16,10 +15,11 @@ import {
   Calendar
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
-import ConfirmDialog from '../components/ConfirmDialog';
+import { motion, AnimatePresence } from 'motion/react';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const AdminPosts: React.FC = () => {
-  const navigation = useNavigation<any>();
+  const navigate = useNavigate();
   const { addPost, updatePost, deletePost, posts, isAdmin, categories } = useContent();
   
   const [title, setTitle] = useState('');
@@ -34,10 +34,10 @@ const AdminPosts: React.FC = () => {
 
   if (!isAdmin) return null;
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!title || !content) {
       setError('مهرباني وکړئ ټول ځایونه ډک کړئ');
-      setTimeout(() => setError(''), 3000);
       return;
     }
     
@@ -60,7 +60,6 @@ const AdminPosts: React.FC = () => {
       setTimeout(() => setSuccess(''), 4000);
     } catch (err) {
       setError('د مطلب په خپرولو کې ستونزه راغله');
-      setTimeout(() => setError(''), 3000);
     } finally {
       setIsSubmitting(false);
     }
@@ -72,6 +71,7 @@ const AdminPosts: React.FC = () => {
     setCategory(post.category);
     setEditingId(post.id);
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteConfirm = async () => {
@@ -82,7 +82,6 @@ const AdminPosts: React.FC = () => {
         setTimeout(() => setSuccess(''), 3000);
       } catch (err) {
         setError('د حذف کولو پر مهال تېروتنه وشوه');
-        setTimeout(() => setError(''), 3000);
       }
       setPostToDelete(null);
     }
@@ -97,152 +96,146 @@ const AdminPosts: React.FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity 
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-            >
-              <ArrowRight size={20} color="#1f2937" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>مطالب مدیریت</Text>
-          </View>
-          <TouchableOpacity 
-            onPress={() => setShowForm(!showForm)}
-            style={[styles.toggleFormButton, showForm && styles.toggleFormButtonActive]}
-          >
-            {showForm ? <XCircle size={20} color="#6b7280" /> : <PlusCircle size={20} color="white" />}
-            <Text style={[styles.toggleFormText, showForm && styles.toggleFormTextActive]}>
-              {showForm ? 'بندول' : 'نوی مطلب'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+    <div className="space-y-6 pb-20">
+      <header className="flex items-center justify-between">
+        <div className="flex items-center space-x-4 space-x-reverse">
+          <button onClick={() => navigate('/admin')} className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl active:scale-90 transition-all">
+            <ArrowRight size={20} />
+          </button>
+          <h1 className="text-2xl font-black">مطالب مدیریت</h1>
+        </div>
+        <button 
+          onClick={() => setShowForm(!showForm)}
+          className={`p-3 rounded-2xl flex items-center space-x-2 space-x-reverse transition-all active:scale-95 ${showForm ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500' : 'bg-[var(--accent-color)] text-white shadow-lg shadow-[var(--accent-color)]/20'}`}
+        >
+          {showForm ? <XCircle size={20} /> : <PlusCircle size={20} />}
+          <span className="text-sm font-bold">{showForm ? 'بندول' : 'نوی مطلب'}</span>
+        </button>
+      </header>
 
+      <AnimatePresence>
         {showForm && (
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>د مطلب سرلیک</Text>
-              <TextInput
-                style={styles.textInput}
-                value={title}
-                onChangeText={setTitle}
-                placeholder="دلته سرلیک ولیکئ..."
-                placeholderTextColor="#9ca3af"
-              />
-            </View>
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mr-4">د مطلب سرلیک</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-2xl py-4 px-6 focus:outline-none focus:ring-4 focus:ring-[var(--accent-color)]/10 focus:border-[var(--accent-color)] transition-all font-bold"
+                      placeholder="دلته سرلیک ولیکئ..."
+                    />
+                  </div>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>کټګوري</Text>
-              {/* Note: React Native doesn't have a built-in select/dropdown that matches web exactly. 
-                  For a real app, use a library like @react-native-picker/picker. 
-                  Here we use a simplified TextInput as a placeholder for the picker. */}
-              <View style={styles.pickerWrapper}>
-                <TextInput
-                  style={styles.pickerInput}
-                  value={category}
-                  onChangeText={setCategory}
-                  placeholder="کټګوري وټاکئ"
-                  placeholderTextColor="#9ca3af"
-                />
-                <View style={styles.pickerIcon}>
-                  <ChevronDown size={18} color="#9ca3af" />
-                </View>
-              </View>
-            </View>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mr-4">کټګوري</label>
+                    <div className="relative">
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-2xl py-4 px-6 focus:outline-none focus:ring-4 focus:ring-[var(--accent-color)]/10 focus:border-[var(--accent-color)] transition-all font-bold appearance-none cursor-pointer"
+                      >
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-zinc-400">
+                        <ChevronDown size={18} />
+                      </div>
+                    </div>
+                  </div>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>د مطلب متن</Text>
-              <TextInput
-                style={styles.textArea}
-                value={content}
-                onChangeText={setContent}
-                placeholder="خپل مطلب په تفصیل سره دلته ولیکئ..."
-                placeholderTextColor="#9ca3af"
-                multiline
-                numberOfLines={6}
-                textAlignVertical="top"
-              />
-            </View>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mr-4">د مطلب متن</label>
+                    <textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      rows={6}
+                      className="w-full bg-zinc-50 dark:bg-black border border-zinc-100 dark:border-zinc-800 rounded-[24px] py-4 px-6 focus:outline-none focus:ring-4 focus:ring-[var(--accent-color)]/10 focus:border-[var(--accent-color)] transition-all leading-relaxed font-medium"
+                      placeholder="خپل مطلب په تفصیل سره دلته ولیکئ..."
+                    />
+                  </div>
+                </div>
 
-            <View style={styles.formActions}>
-              <TouchableOpacity
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-                style={styles.submitButton}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <>
-                    {editingId ? <Edit3 size={18} color="white" /> : <Send size={18} color="white" />}
-                    <Text style={styles.submitButtonText}>{editingId ? 'تغیرات خوندي کړئ' : 'خپور کړئ'}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              
-              {editingId && (
-                <TouchableOpacity
-                  onPress={cancelEdit}
-                  style={styles.cancelButton}
-                >
-                  <Text style={styles.cancelButtonText}>لغوه</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 bg-[var(--accent-color)] text-white font-black py-4 rounded-2xl flex items-center justify-center space-x-2 space-x-reverse active:scale-[0.98] transition-all"
+                  >
+                    {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : editingId ? <Edit3 size={18} /> : <Send size={18} />}
+                    <span>{editingId ? 'تغیرات خوندي کړئ' : 'خپور کړئ'}</span>
+                  </button>
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      className="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 font-bold px-6 rounded-2xl active:scale-[0.98] transition-all"
+                    >
+                      لغوه
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        <View style={styles.listSection}>
-          <Text style={styles.listSectionTitle}>خپاره شوي مطالب ({posts.length})</Text>
-          
-          <View style={styles.listContainer}>
-            {posts.map((post) => (
-              <View key={post.id} style={styles.postCard}>
-                <View style={styles.postCardContent}>
-                  <Text style={styles.postTitle} numberOfLines={1}>{post.title}</Text>
-                  <View style={styles.postMeta}>
-                    <View style={styles.categoryBadge}>
-                      <Text style={styles.categoryBadgeText}>{post.category}</Text>
-                    </View>
-                    <View style={styles.dateContainer}>
-                      <Calendar size={10} color="#9ca3af" />
-                      <Text style={styles.dateText}>
-                        {new Date(post.timestamp).toLocaleDateString('fa-AF')}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.postActions}>
-                  <TouchableOpacity
-                    onPress={() => handleEdit(post)}
-                    style={styles.actionButton}
-                  >
-                    <Edit3 size={18} color="#3b82f6" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setPostToDelete(post.id)}
-                    style={styles.actionButton}
-                  >
-                    <Trash2 size={18} color="#ef4444" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-            
-            {posts.length === 0 && (
-              <View style={styles.emptyState}>
-                <FileText size={40} color="#d1d5db" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyStateText}>تر اوسه کوم مطلب نشته</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </ScrollView>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-sm font-black text-zinc-400 uppercase tracking-widest">خپاره شوي مطالب ({posts.length})</h2>
+        </div>
+
+        <div className="space-y-3">
+          {posts.map((post) => (
+            <motion.div
+              layout
+              key={post.id}
+              className="bg-white dark:bg-zinc-900 p-4 rounded-[24px] border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center justify-between group"
+            >
+              <div className="flex-1 min-w-0 ml-4">
+                <h3 className="font-bold text-zinc-800 dark:text-zinc-100 truncate">{post.title}</h3>
+                <div className="flex items-center space-x-3 space-x-reverse mt-1">
+                  <span className="text-[10px] font-black text-[var(--accent-color)] bg-[var(--accent-color)]/10 px-2 py-0.5 rounded-full">{post.category}</span>
+                  <div className="flex items-center text-[10px] text-zinc-400 font-medium">
+                    <Calendar size={10} className="ml-1" />
+                    {new Date(post.timestamp).toLocaleDateString('fa-AF')}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-1 space-x-reverse">
+                <button
+                  onClick={() => handleEdit(post)}
+                  className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
+                >
+                  <Edit3 size={18} />
+                </button>
+                <button
+                  onClick={() => setPostToDelete(post.id)}
+                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+          {posts.length === 0 && (
+            <div className="text-center py-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-[32px] border border-dashed border-zinc-200 dark:border-zinc-800">
+              <FileText size={40} className="mx-auto text-zinc-300 mb-3" />
+              <p className="text-zinc-400 font-medium">تر اوسه کوم مطلب نشته</p>
+            </div>
+          )}
+        </div>
+      </div>
 
       <ConfirmDialog
         isOpen={!!postToDelete}
@@ -252,291 +245,21 @@ const AdminPosts: React.FC = () => {
         onCancel={() => setPostToDelete(null)}
       />
 
-      {(error || success) ? (
-        <View style={[styles.toast, error ? styles.toastError : styles.toastSuccess]}>
-          {error ? <AlertCircle size={20} color="white" /> : <CheckCircle2 size={20} color="white" />}
-          <Text style={styles.toastText}>{error || success}</Text>
-        </View>
-      ) : null}
-    </KeyboardAvoidingView>
+      <AnimatePresence>
+        {(error || success) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className={`fixed bottom-6 left-6 right-6 p-4 rounded-2xl shadow-2xl flex items-center space-x-3 space-x-reverse z-50 ${error ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}`}
+          >
+            {error ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
+            <span className="font-bold text-sm">{error || success}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  header: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    marginTop: 16,
-  },
-  headerLeft: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 16,
-  },
-  backButton: {
-    padding: 8,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  toggleFormButton: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'var(--accent-color)', // Fallback needed
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    shadowColor: 'var(--accent-color)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  toggleFormButtonActive: {
-    backgroundColor: '#f3f4f6',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  toggleFormText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  toggleFormTextActive: {
-    color: '#6b7280',
-  },
-  formContainer: {
-    backgroundColor: 'white',
-    borderRadius: 32,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 8,
-    marginRight: 16,
-    textAlign: 'right',
-  },
-  textInput: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    borderRadius: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    textAlign: 'right',
-  },
-  pickerWrapper: {
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  pickerInput: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    borderRadius: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    textAlign: 'right',
-  },
-  pickerIcon: {
-    position: 'absolute',
-    left: 20,
-  },
-  textArea: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    borderRadius: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    fontSize: 14,
-    color: '#1f2937',
-    textAlign: 'right',
-    minHeight: 120,
-  },
-  formActions: {
-    flexDirection: 'row-reverse',
-    gap: 12,
-    marginTop: 8,
-  },
-  submitButton: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'var(--accent-color)', // Fallback needed
-    paddingVertical: 16,
-    borderRadius: 16,
-  },
-  submitButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    backgroundColor: '#f3f4f6',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#6b7280',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  listSection: {
-    marginTop: 8,
-  },
-  listSectionTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 16,
-    marginRight: 8,
-    textAlign: 'right',
-  },
-  listContainer: {
-    gap: 12,
-  },
-  postCard: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  postCardContent: {
-    flex: 1,
-    marginRight: 16,
-  },
-  postTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    textAlign: 'right',
-    marginBottom: 4,
-  },
-  postMeta: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 12,
-  },
-  categoryBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)', // Fallback accent
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  categoryBadgeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: 'var(--accent-color)', // Fallback needed
-  },
-  dateContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 4,
-  },
-  dateText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-  },
-  postActions: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionButton: {
-    padding: 8,
-    borderRadius: 12,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    backgroundColor: '#f9fafb',
-    borderRadius: 32,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
-  },
-  emptyStateText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-  },
-  toast: {
-    position: 'absolute',
-    bottom: 24,
-    left: 24,
-    right: 24,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  toastError: {
-    backgroundColor: '#ef4444',
-  },
-  toastSuccess: {
-    backgroundColor: '#10b981',
-  },
-  toastText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-});
 
 export default AdminPosts;

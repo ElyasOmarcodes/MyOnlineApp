@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Heart, Settings, Info, LayoutDashboard } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useContent } from '../context/ContentContext';
+import { useContent } from '../src/context/ContentContext';
 
 const Navigation: React.FC = () => {
   const location = useLocation();

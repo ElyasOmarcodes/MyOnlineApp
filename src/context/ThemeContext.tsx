@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -17,55 +15,58 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const systemColorScheme = useColorScheme();
-  const [mode, setMode] = useState<ThemeMode>('system');
-  const [accentColor, setAccentColor] = useState('#10b981');
-  const [fontSize, setFontSize] = useState(16);
-  const [isReady, setIsReady] = useState(false);
+  const [mode, setMode] = useState<ThemeMode>(() => {
+    const saved = localStorage.getItem('theme-mode');
+    return (saved as ThemeMode) || 'system';
+  });
+
+  const [accentColor, setAccentColor] = useState(() => {
+    return localStorage.getItem('accent-color') || '#10b981'; // Default emerald-500
+  });
+
+  const [fontSize, setFontSize] = useState(() => {
+    return Number(localStorage.getItem('font-size')) || 16;
+  });
+
+  const [isDark, setIsDark] = useState<boolean>(false);
 
   useEffect(() => {
-    const loadTheme = async () => {
-      try {
-        const [savedMode, savedAccent, savedFontSize] = await Promise.all([
-          AsyncStorage.getItem('theme-mode'),
-          AsyncStorage.getItem('accent-color'),
-          AsyncStorage.getItem('font-size'),
-        ]);
-
-        if (savedMode) setMode(savedMode as ThemeMode);
-        if (savedAccent) setAccentColor(savedAccent);
-        if (savedFontSize) setFontSize(Number(savedFontSize));
-      } catch (e) {
-        console.error('Error loading theme from AsyncStorage', e);
-      } finally {
-        setIsReady(true);
+    localStorage.setItem('theme-mode', mode);
+    const root = window.document.documentElement;
+    
+    const applyTheme = (theme: 'light' | 'dark') => {
+      if (theme === 'dark') {
+        root.classList.add('dark');
+        setIsDark(true);
+      } else {
+        root.classList.remove('dark');
+        setIsDark(false);
       }
     };
 
-    loadTheme();
-  }, []);
+    if (mode === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e: MediaQueryListEvent) => {
+        applyTheme(e.matches ? 'dark' : 'light');
+      };
+      
+      applyTheme(mediaQuery.matches ? 'dark' : 'light');
+      mediaQuery.addEventListener('change', handleChange);
+      
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    } else {
+      applyTheme(mode);
+    }
+  }, [mode]);
 
   useEffect(() => {
-    if (isReady) {
-      AsyncStorage.setItem('theme-mode', mode);
-    }
-  }, [mode, isReady]);
+    localStorage.setItem('accent-color', accentColor);
+    document.documentElement.style.setProperty('--accent-color', accentColor);
+  }, [accentColor]);
 
   useEffect(() => {
-    if (isReady) {
-      AsyncStorage.setItem('accent-color', accentColor);
-    }
-  }, [accentColor, isReady]);
-
-  useEffect(() => {
-    if (isReady) {
-      AsyncStorage.setItem('font-size', fontSize.toString());
-    }
-  }, [fontSize, isReady]);
-
-  const isDark = mode === 'system' ? systemColorScheme === 'dark' : mode === 'dark';
-
-  if (!isReady) return null;
+    localStorage.setItem('font-size', fontSize.toString());
+  }, [fontSize]);
 
   return (
     <ThemeContext.Provider value={{ mode, setMode, accentColor, setAccentColor, fontSize, setFontSize, isDark }}>

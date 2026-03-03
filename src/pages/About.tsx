@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { 
   ChevronDown, 
   ShieldCheck, 
@@ -20,415 +19,129 @@ import {
 const About: React.FC = () => {
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
-  const openLink = (url: string) => {
-    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
-  };
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Hero Section */}
-      <View style={styles.header}>
-        <View style={styles.headerBackground}>
-          {/* SVG placeholder */}
-        </View>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>زمونږ په اړه</Text>
-          <Text style={styles.headerSubtitle}>د اسلامي مطالبو او ښکلو ویناوو د خپرولو آنلاین پلیټ فارم.</Text>
-        </View>
-      </View>
+    <div className="flex-1 bg-zinc-50 dark:bg-black min-h-screen pb-24" dir="rtl">
+      <div className="p-4">
+        {/* Hero Section */}
+        <div className="bg-[var(--accent-color)] rounded-[40px] py-10 px-6 mb-12 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-20 bg-black" />
+          <div className="relative z-10">
+            <h1 className="text-3xl font-bold text-white text-right mb-2">زمونږ په اړه</h1>
+            <p className="text-sm font-medium text-white/80 text-right">د اسلامي مطالبو او ښکلو ویناوو د خپرولو آنلاین پلیټ فارم.</p>
+          </div>
+        </div>
 
-      {/* Developer Profile Card */}
-      <View style={styles.profileSection}>
-        <View style={styles.profileCard}>
-          <View style={styles.profileContent}>
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatarPulse} />
-              <View style={styles.avatarInner}>
-                <User size={64} color="#d1d5db" />
-              </View>
-            </View>
+        {/* Developer Profile Card */}
+        <div className="mb-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-[40px] p-10 border border-zinc-100 dark:border-zinc-800 flex flex-col items-center shadow-sm">
+            <div className="relative mb-6">
+              <div className="absolute -inset-2.5 bg-emerald-500/20 rounded-full animate-pulse" />
+              <div className="w-32 h-32 rounded-full bg-zinc-50 dark:bg-zinc-800 border-4 border-white dark:border-zinc-900 flex justify-center items-center relative z-10 overflow-hidden">
+                <User size={64} className="text-zinc-300" />
+              </div>
+            </div>
             
-            <View style={styles.nameContainer}>
-              <Text style={styles.profileName}>الیاس عمر</Text>
-              <View style={styles.roleBadge}>
-                <Text style={styles.roleBadgeText}>پروګرام جوړونکی</Text>
-              </View>
-            </View>
+            <div className="flex flex-col items-center mb-4">
+              <h2 className="text-2xl font-bold text-zinc-800 dark:text-zinc-100 mb-2">الیاس عمر</h2>
+              <div className="bg-emerald-500/10 px-4 py-1 rounded-2xl">
+                <span className="text-emerald-500 text-[10px] font-bold uppercase">پروګرام جوړونکی</span>
+              </div>
+            </div>
 
-            <Text style={styles.profileDescription}>
+            <p className="text-zinc-500 text-center leading-relaxed mb-6">
               د مؤمن ولس یو پروګرام جوړونکی دی چې غواړي د ټکنالوژۍ له لارې د اسلام خدمت وکړي او د دیني معلوماتو د خپرولو په برخه کې خپله ونډه واخلي.
-            </Text>
+            </p>
 
-            <View style={styles.socialLinks}>
-              <TouchableOpacity style={styles.socialButton} onPress={() => openLink('https://github.com')}>
-                <Github size={20} color="#9ca3af" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton} onPress={() => openLink('https://twitter.com')}>
-                <Twitter size={20} color="#9ca3af" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton} onPress={() => openLink('mailto:example@email.com')}>
-                <Mail size={20} color="#9ca3af" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </View>
+            <div className="flex flex-row-reverse justify-center gap-4">
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                <Github size={20} className="text-zinc-400" />
+              </a>
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                <Twitter size={20} className="text-zinc-400" />
+              </a>
+              <a href="mailto:example@email.com" className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                <Mail size={20} className="text-zinc-400" />
+              </a>
+            </div>
+          </div>
+        </div>
 
-      {/* Features Grid */}
-      <View style={styles.featuresSection}>
-        <Text style={styles.sectionTitle}>د اپلیکیشن ځانګړتیاوې</Text>
-        <View style={styles.featuresGrid}>
-          {[
-            { icon: Database, title: 'فایربیس', desc: 'آنلاین ډیټابیس' },
-            { icon: Zap, title: 'چټک', desc: 'لوړ سرعت' },
-            { icon: Shield, title: 'خوندي', desc: 'اډمین پینل' },
-            { icon: LayoutIcon, title: 'ښکلی UI', desc: 'عصري ډیزاین' },
-          ].map((feature, i) => (
-            <View key={i} style={styles.featureCard}>
-              <View style={styles.featureIconContainer}>
-                <feature.icon size={24} color="var(--accent-color)" />
-              </View>
-              <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDesc}>{feature.desc}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
+        {/* Features Grid */}
+        <div className="mb-6">
+          <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4 px-2 text-right">د اپلیکیشن ځانګړتیاوې</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { icon: Database, title: 'فایربیس', desc: 'آنلاین ډیټابیس' },
+              { icon: Zap, title: 'چټک', desc: 'لوړ سرعت' },
+              { icon: Shield, title: 'خوندي', desc: 'اډمین پینل' },
+              { icon: LayoutIcon, title: 'ښکلی UI', desc: 'عصري ډیزاین' },
+            ].map((feature, i) => (
+              <div key={i} className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 border border-zinc-100 dark:border-zinc-800 flex flex-col items-end shadow-sm">
+                <div className="w-12 h-12 rounded-2xl bg-[var(--accent-color)]/10 flex justify-center items-center mb-3">
+                  <feature.icon size={24} className="text-[var(--accent-color)]" />
+                </div>
+                <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 mb-1 text-right">{feature.title}</h4>
+                <p className="text-[10px] text-zinc-400 text-right">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
-      {/* Privacy Policy Accordion */}
-      <View style={styles.privacySection}>
-        <TouchableOpacity
-          style={styles.privacyHeader}
-          onPress={() => setIsPrivacyOpen(!isPrivacyOpen)}
-        >
-          <View style={styles.privacyHeaderLeft}>
-            <View style={styles.privacyIconContainer}>
-              <ShieldCheck size={24} color="#10b981" />
-            </View>
-            <View style={styles.privacyTitleContainer}>
-              <Text style={styles.privacyTitle}>قوانین او پالیسي</Text>
-              <Text style={styles.privacySubtitle}>Privacy Policy</Text>
-            </View>
-          </View>
-          <View style={{ transform: [{ rotate: isPrivacyOpen ? '180deg' : '0deg' }] }}>
-            <ChevronDown size={20} color="#d1d5db" />
-          </View>
-        </TouchableOpacity>
-        
-        {isPrivacyOpen && (
-          <View style={styles.privacyContent}>
-            <Text style={styles.privacyText}>
-              دا اپلیکیشن ستاسو د معلوماتو د خوندي ساتلو لپاره جوړ شوی دی. ټول مطالب په فایربیس کې خوندي کیږي.
-            </Text>
-            <View style={styles.privacyList}>
-              {[
-                'مطالب په ژوندۍ بڼه له فایربیس څخه راځي.',
-                'اډمین پینل د مطالبو د خپرولو لپاره دی.',
-                'خوښ شوي مطالب ستاسو په موبایل کې خوندي کیږي.'
-              ].map((item, i) => (
-                <View key={i} style={styles.privacyListItem}>
-                  <View style={styles.privacyListBullet} />
-                  <Text style={styles.privacyListItemText}>{item}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-      </View>
+        {/* Privacy Policy Accordion */}
+        <div className="bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-100 dark:border-zinc-800 overflow-hidden mb-12 shadow-sm">
+          <button
+            className="w-full flex flex-row-reverse items-center justify-between p-8"
+            onClick={() => setIsPrivacyOpen(!isPrivacyOpen)}
+          >
+            <div className="flex flex-row-reverse items-center">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex justify-center items-center ml-4">
+                <ShieldCheck size={24} className="text-emerald-500" />
+              </div>
+              <div className="flex flex-col items-end">
+                <h3 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">قوانین او پالیسي</h3>
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Privacy Policy</span>
+              </div>
+            </div>
+            <div className={`transition-transform duration-300 ${isPrivacyOpen ? 'rotate-180' : 'rotate-0'}`}>
+              <ChevronDown size={20} className="text-zinc-300" />
+            </div>
+          </button>
+          
+          {isPrivacyOpen && (
+            <div className="px-8 pb-8">
+              <p className="text-zinc-500 text-sm leading-relaxed text-right mb-4">
+                دا اپلیکیشن ستاسو د معلوماتو د خوندي ساتلو لپاره جوړ شوی دی. ټول مطالب په فایربیس کې خوندي کیږي.
+              </p>
+              <div className="flex flex-col gap-3">
+                {[
+                  'مطالب په ژوندۍ بڼه له فایربیس څخه راځي.',
+                  'اډمین پینل د مطالبو د خپرولو لپاره دی.',
+                  'خوښ شوي مطالب ستاسو په موبایل کې خوندي کیږي.'
+                ].map((item, i) => (
+                  <div key={i} className="flex flex-row-reverse items-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-color)] ml-3" />
+                    <span className="text-xs text-zinc-500 text-right">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
-      <View style={styles.footer}>
-        <View style={styles.footerDivider}>
-          <View style={styles.footerLine} />
-          <Text style={styles.footerBrand}>Ramadan Content App</Text>
-          <View style={styles.footerLine} />
-        </View>
-        <View style={styles.footerCopyright}>
-          <Text style={styles.footerCopyrightText}>© ۲۰۲۴ ټول حقونه خوندي دي</Text>
-          <Text style={styles.footerVersionText}>نسخه ۲.۰.۰ • Crafted with Love</Text>
-        </View>
-      </View>
-    </ScrollView>
+        <div className="flex flex-col items-center py-12">
+          <div className="flex flex-row-reverse items-center justify-center mb-4">
+            <div className="h-px w-8 bg-zinc-200 dark:bg-zinc-800 mx-2" />
+            <span className="text-[10px] font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest">Ramadan Content App</span>
+            <div className="h-px w-8 bg-zinc-200 dark:bg-zinc-800 mx-2" />
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-bold text-zinc-400 mb-1">© ۲۰۲۴ ټول حقونه خوندي دي</span>
+            <span className="text-[10px] font-bold text-zinc-400 opacity-50">نسخه ۲.۰.۰ • Crafted with Love</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  header: {
-    backgroundColor: 'var(--accent-color)', // Fallback needed
-    borderRadius: 40,
-    paddingVertical: 40,
-    paddingHorizontal: 24,
-    marginBottom: 48,
-    overflow: 'hidden',
-  },
-  headerBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.2,
-  },
-  headerContent: {
-    zIndex: 10,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'right',
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'right',
-  },
-  profileSection: {
-    marginBottom: 24,
-  },
-  profileCard: {
-    backgroundColor: 'white',
-    borderRadius: 40,
-    padding: 40,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    alignItems: 'center',
-  },
-  profileContent: {
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 24,
-  },
-  avatarPulse: {
-    position: 'absolute',
-    top: -10,
-    left: -10,
-    right: -10,
-    bottom: -10,
-    backgroundColor: 'rgba(16, 185, 129, 0.2)', // Example accent color
-    borderRadius: 100,
-  },
-  avatarInner: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: '#f9fafb',
-    borderWidth: 4,
-    borderColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  nameContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
-  roleBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderRadius: 16,
-  },
-  roleBadgeText: {
-    color: '#10b981',
-    fontSize: 10,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  profileDescription: {
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  socialLinks: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  socialButton: {
-    padding: 12,
-    backgroundColor: '#f9fafb',
-    borderRadius: 16,
-  },
-  featuresSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 16,
-    paddingHorizontal: 8,
-    textAlign: 'right',
-  },
-  featuresGrid: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  featureCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    borderRadius: 32,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    marginBottom: 16,
-  },
-  featureIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  featureTextContainer: {
-    alignItems: 'flex-end',
-  },
-  featureTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  featureDesc: {
-    fontSize: 10,
-    color: '#9ca3af',
-  },
-  privacySection: {
-    backgroundColor: 'white',
-    borderRadius: 32,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    overflow: 'hidden',
-    marginBottom: 48,
-  },
-  privacyHeader: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 32,
-  },
-  privacyHeaderLeft: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-  },
-  privacyIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 16,
-  },
-  privacyTitleContainer: {
-    alignItems: 'flex-end',
-  },
-  privacyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  privacySubtitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  privacyContent: {
-    paddingHorizontal: 32,
-    paddingBottom: 32,
-  },
-  privacyText: {
-    color: '#6b7280',
-    fontSize: 14,
-    lineHeight: 24,
-    textAlign: 'right',
-    marginBottom: 16,
-  },
-  privacyList: {
-    gap: 12,
-  },
-  privacyListItem: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-  },
-  privacyListBullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'var(--accent-color)',
-    marginLeft: 12,
-  },
-  privacyListItemText: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'right',
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: 48,
-  },
-  footerDivider: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  footerLine: {
-    height: 1,
-    width: 32,
-    backgroundColor: '#e5e7eb',
-    marginHorizontal: 8,
-  },
-  footerBrand: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#d1d5db',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  footerCopyright: {
-    alignItems: 'center',
-  },
-  footerCopyrightText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    marginBottom: 4,
-  },
-  footerVersionText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    opacity: 0.5,
-  },
-});
 
 export default About;

@@ -1,193 +1,97 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigate } from 'react-router-dom';
 import { useContent } from '../context/ContentContext';
 import { User, Phone, Check, ChevronRight } from 'lucide-react';
 
 const ProfileEdit: React.FC = () => {
   const { currentUser, updateUser } = useContent();
-  const navigation = useNavigation<any>();
+  const navigate = useNavigate();
   const [name, setName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     if (name.trim() && phone.trim()) {
       updateUser(name.trim(), phone.trim());
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
-        navigation.goBack();
+        navigate(-1);
       }, 1500);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
+    <div className="flex-1 bg-zinc-50 dark:bg-black min-h-screen pb-24" dir="rtl">
+      <div className="p-4">
+        <div className="flex items-center flex-row-reverse mb-8 mt-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 ml-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
           >
-            <ChevronRight size={24} color="#717a8b" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>پروفایل ایډیټ</Text>
-        </View>
+            <ChevronRight size={24} className="text-zinc-500" />
+          </button>
+          <h1 className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">پروفایل ایډیټ</h1>
+        </div>
 
-        <View style={styles.formContainer}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>ستاسو نوم</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.inputIconRight}>
-                <User size={18} color="#9ca3af" />
-              </View>
-              <TextInput
-                style={styles.textInput}
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-[40px] p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm">
+          <div className="mb-6">
+            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 mr-4 text-right">
+              ستاسو نوم
+            </label>
+            <div className="flex items-center flex-row-reverse bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus-within:border-[var(--accent-color)] focus-within:ring-1 focus-within:ring-[var(--accent-color)] transition-all">
+              <div className="px-4">
+                <User size={18} className="text-zinc-400" />
+              </div>
+              <input
+                type="text"
+                className="flex-1 py-4 px-4 text-base font-bold text-zinc-800 dark:text-zinc-100 text-right bg-transparent focus:outline-none placeholder-zinc-400"
                 value={name}
-                onChangeText={setName}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="نوم"
-                placeholderTextColor="#9ca3af"
+                required
               />
-            </View>
-          </View>
+            </div>
+          </div>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>د موبایل شمېره</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.inputIconRight}>
-                <Phone size={18} color="#9ca3af" />
-              </View>
-              <TextInput
-                style={[styles.textInput, { textAlign: 'left' }]}
+          <div className="mb-8">
+            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 mr-4 text-right">
+              د موبایل شمېره
+            </label>
+            <div className="flex items-center flex-row-reverse bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus-within:border-[var(--accent-color)] focus-within:ring-1 focus-within:ring-[var(--accent-color)] transition-all">
+              <div className="px-4">
+                <Phone size={18} className="text-zinc-400" />
+              </div>
+              <input
+                type="tel"
+                className="flex-1 py-4 px-4 text-base font-bold text-zinc-800 dark:text-zinc-100 text-left bg-transparent focus:outline-none placeholder-zinc-400"
                 value={phone}
-                onChangeText={setPhone}
+                onChange={(e) => setPhone(e.target.value)}
                 placeholder="شمېره"
-                placeholderTextColor="#9ca3af"
-                keyboardType="phone-pad"
+                dir="ltr"
+                required
               />
-            </View>
-          </View>
+            </div>
+          </div>
 
-          <TouchableOpacity
-            onPress={handleSubmit}
-            style={styles.submitButton}
-            activeOpacity={0.8}
+          <button
+            type="submit"
+            className="w-full bg-[var(--accent-color)] hover:opacity-90 text-white rounded-2xl py-5 flex items-center justify-center transition-all shadow-lg shadow-[var(--accent-color)]/20 active:scale-[0.98]"
           >
             {success ? (
-              <View style={styles.buttonContent}>
-                <Check size={20} color="white" />
-                <Text style={styles.buttonText}>خوندي شو!</Text>
-              </View>
+              <div className="flex items-center flex-row-reverse gap-2">
+                <Check size={20} className="text-white" />
+                <span className="text-base font-bold">خوندي شو!</span>
+              </div>
             ) : (
-              <Text style={styles.buttonText}>تغیرات خوندي کړئ</Text>
+              <span className="text-base font-bold">تغیرات خوندي کړئ</span>
             )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </button>
+        </form>
+      </div>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 48,
-  },
-  header: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 16,
-  },
-  backButton: {
-    padding: 12,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    marginLeft: 16,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  formContainer: {
-    backgroundColor: 'white',
-    borderRadius: 40,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  inputLabel: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 8,
-    marginRight: 16,
-    textAlign: 'right',
-  },
-  inputWrapper: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    borderRadius: 16,
-  },
-  inputIconRight: {
-    paddingHorizontal: 16,
-  },
-  textInput: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    textAlign: 'right',
-  },
-  submitButton: {
-    backgroundColor: 'var(--accent-color)', // Fallback needed
-    borderRadius: 16,
-    paddingVertical: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    shadowColor: 'var(--accent-color)',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 5,
-  },
-  buttonContent: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
 
 export default ProfileEdit;
